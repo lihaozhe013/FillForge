@@ -1,7 +1,20 @@
-import type { ExtractionResult, TemplateSchema } from "@docufill/schema";
+import type {
+  ExtractionResult,
+  FieldDefinition,
+  FieldDefinitions,
+  TemplateSchema,
+} from "@docufill/schema";
 import { describe, expect, it } from "vitest";
 import { formatDate, normalizeExtractionResult, normalizeFieldValue } from "./normalizer.ts";
 import { validateExtractionResult } from "./validator.ts";
+
+function fieldOf(fields: FieldDefinitions, key: string): FieldDefinition {
+  const field = fields[key];
+  if (!field) {
+    throw new Error(`Missing fixture field: ${key}`);
+  }
+  return field;
+}
 
 const invoiceTemplate: TemplateSchema = {
   schema_version: 1,
@@ -130,19 +143,19 @@ describe("validateExtractionResult", () => {
 
 describe("normalizeFieldValue", () => {
   it("trims and removes spaces for strings", () => {
-    const field = invoiceTemplate.fields.invoice_number;
+    const field = fieldOf(invoiceTemplate.fields, "invoice_number");
     expect(normalizeFieldValue(field, " 1234 5678 ")).toBe("12345678");
   });
 
   it("coerces numeric strings to numbers", () => {
-    const field = invoiceTemplate.fields.total_amount;
+    const field = fieldOf(invoiceTemplate.fields, "total_amount");
     expect(normalizeFieldValue(field, "1234.50")).toBe(1234.5);
     expect(normalizeFieldValue(field, 12)).toBe(12);
     expect(normalizeFieldValue(field, "abc")).toBe("abc");
   });
 
   it("normalizes common Chinese and slash date formats", () => {
-    const field = invoiceTemplate.fields.invoice_date;
+    const field = fieldOf(invoiceTemplate.fields, "invoice_date");
     expect(normalizeFieldValue(field, "2026年09月16日")).toBe("2026-09-16");
     expect(normalizeFieldValue(field, "2026/9/6")).toBe("2026-09-06");
     expect(normalizeFieldValue(field, "2026-09-16")).toBe("2026-09-16");
@@ -150,7 +163,7 @@ describe("normalizeFieldValue", () => {
   });
 
   it("formats dates according to the output format", () => {
-    const field = { ...invoiceTemplate.fields.invoice_date };
+    const field = { ...fieldOf(invoiceTemplate.fields, "invoice_date") };
     expect(normalizeFieldValue(field, "2026-09-16")).toBe("2026-09-16");
     expect(
       normalizeFieldValue({ ...field, output: { format: "YYYY年MM月DD日" } }, "2026-09-16"),
@@ -158,7 +171,7 @@ describe("normalizeFieldValue", () => {
   });
 
   it("keeps null values null", () => {
-    expect(normalizeFieldValue(invoiceTemplate.fields.remark, null)).toBeNull();
+    expect(normalizeFieldValue(fieldOf(invoiceTemplate.fields, "remark"), null)).toBeNull();
   });
 });
 

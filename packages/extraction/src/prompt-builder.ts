@@ -80,7 +80,15 @@ export function buildExtractionPrompt(template: TemplateSchema): GeneratedPrompt
     "",
     "Requested fields:",
     "",
-    fieldKeys.map((key) => describeField(key, fields[key])).join("\n\n"),
+    fieldKeys
+      .map((key) => {
+        const field = fields[key];
+        if (!field) {
+          throw new Error(`Field "${key}" disappeared while building prompt`);
+        }
+        return describeField(key, field);
+      })
+      .join("\n\n"),
     "",
     "For every field, determine one status: found, not_found, or ambiguous.",
     "",
