@@ -66,6 +66,28 @@ importers:
         specifier: ^22.20.3
         version: 22.20.3
 
+  packages/runs:
+    dependencies:
+      '@docufill/core':
+        specifier: workspace:*
+        version: link:../core
+      '@docufill/docx':
+        specifier: workspace:*
+        version: link:../docx
+      '@docufill/extraction':
+        specifier: workspace:*
+        version: link:../extraction
+      '@docufill/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@docufill/templates':
+        specifier: workspace:*
+        version: link:../templates
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.3
+        version: 22.20.3
+
   packages/schema:
     dependencies:
       zod:

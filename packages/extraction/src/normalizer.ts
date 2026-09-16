@@ -86,6 +86,28 @@ export function normalizeFieldValue(field: FieldDefinition, value: unknown): unk
 }
 
 /**
+ * Normalize a plain business-value record (e.g. reviewed values) against the
+ * template's field definitions.
+ */
+export function normalizeValues(
+  values: Record<string, unknown>,
+  fields: FieldDefinitions,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(values)) {
+    const field = fields[key];
+    if (!field) {
+      continue;
+    }
+    const normalized = normalizeFieldValue(field, value);
+    if (normalized !== null && normalized !== undefined) {
+      out[key] = normalized;
+    }
+  }
+  return out;
+}
+
+/**
  * Turn a validated extraction result into the normalized business record
  * that bindings consume. Fields without a value are omitted.
  */
@@ -95,14 +117,7 @@ export function normalizeExtractionResult(
 ): Record<string, unknown> {
   const values: Record<string, unknown> = {};
   for (const [key, extracted] of Object.entries(result)) {
-    const field = fields[key];
-    if (!field) {
-      continue;
-    }
-    const value = normalizeFieldValue(field, extracted.value);
-    if (value !== null && value !== undefined) {
-      values[key] = value;
-    }
+    values[key] = extracted.value;
   }
-  return values;
+  return normalizeValues(values, fields);
 }
