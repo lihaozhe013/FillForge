@@ -5,7 +5,7 @@ name: 中国发票
 description: 从中国发票提取信息并生成目标文档
 
 document:
-  file: invoice-template.docx
+  file: template.docx
 
 fields:
   invoice_number:

@@ -11,6 +11,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.5.14
         version: 2.5.14
+      '@docufill/tools':
+        specifier: workspace:*
+        version: link:packages/tools
       '@types/node':
         specifier: ^22.20.3
         version: 22.20.3
@@ -161,6 +164,31 @@ importers:
       '@docufill/docx':
         specifier: workspace:*
         version: link:../docx
+      '@types/node':
+        specifier: ^22.20.3
+        version: 22.20.3
+
+  packages/tools:
+    dependencies:
+      '@docufill/core':
+        specifier: workspace:*
+        version: link:../core
+      '@docufill/docx':
+        specifier: workspace:*
+        version: link:../docx
+      '@docufill/extraction':
+        specifier: workspace:*
+        version: link:../extraction
+      '@docufill/runs':
+        specifier: workspace:*
+        version: link:../runs
+      '@docufill/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@docufill/templates':
+        specifier: workspace:*
+        version: link:../templates
+    devDependencies:
       '@types/node':
         specifier: ^22.20.3
         version: 22.20.3

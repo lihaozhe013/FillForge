@@ -5,7 +5,7 @@ name: Simple report
 description: Minimal template used by unit and integration tests
 
 document:
-  file: simple-template.docx
+  file: template.docx
 
 fields:
   title:
