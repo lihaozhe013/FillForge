@@ -53,6 +53,19 @@ importers:
         specifier: ^22.20.3
         version: 22.20.3
 
+  packages/extraction:
+    dependencies:
+      '@docufill/core':
+        specifier: workspace:*
+        version: link:../core
+      '@docufill/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.3
+        version: 22.20.3
+
   packages/schema:
     dependencies:
       zod:

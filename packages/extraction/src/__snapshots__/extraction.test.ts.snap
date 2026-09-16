@@ -1,0 +1,58 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildExtractionPrompt > matches the golden prompt for the invoice fixture 1`] = `
+"You are a structured document information extractor.
+
+Inspect the documents/images supplied by the user.
+
+Extract only the requested fields.
+
+Do not guess.
+
+If a field cannot be reliably determined, set its value to null and describe why through the status and evidence fields.
+
+Requested fields:
+
+invoice_number
+Meaning: 发票号码
+Type: string
+Required: yes
+Description: 发票上明确标注的发票号码
+Extraction rule:
+找到明确标记为“发票号码”的值。不要将“发票代码”作为发票号码。
+
+invoice_date
+Meaning: 开票日期
+Type: date
+Required: yes
+
+total_amount
+Meaning: 价税合计
+Type: number
+Required: yes
+
+For every field, determine one status: found, not_found, or ambiguous.
+
+Return valid JSON only, with no commentary before or after it.
+
+Expected format:
+
+{
+  "invoice_number": {
+    "value": "string or null",
+    "status": "found | not_found | ambiguous",
+    "evidence": "short supporting text or null"
+  },
+  "invoice_date": {
+    "value": "date string (YYYY-MM-DD) or null",
+    "status": "found | not_found | ambiguous",
+    "evidence": "short supporting text or null"
+  },
+  "total_amount": {
+    "value": "number or null",
+    "status": "found | not_found | ambiguous",
+    "evidence": "short supporting text or null"
+  }
+}
+"
+`;
