@@ -133,7 +133,10 @@ describe("RunService end to end", () => {
     expect(await outputText(artifact.path)).toContain("开票日期：2026-09-16");
 
     const details = await runService.getRun(run.id);
-    expect(details.outputs).toEqual(["result-001.docx", "result.docx"]);
+    expect(details.outputs.map((output) => output.filename)).toEqual([
+      "result-001.docx",
+      "result.docx",
+    ]);
     expect(details.review?.fields.seller_name?.decision).toBe("accepted");
 
     const runs = await runService.listRuns();
@@ -153,7 +156,11 @@ describe("RunService end to end", () => {
     expect(first.filename).toBe("result-001.docx");
     expect(second.filename).toBe("result-002.docx");
     const details = await runService.getRun(run.id);
-    expect(details.outputs).toEqual(["result-001.docx", "result-002.docx", "result.docx"]);
+    expect(details.outputs.map((output) => output.filename)).toEqual([
+      "result-001.docx",
+      "result-002.docx",
+      "result.docx",
+    ]);
   });
 
   it("blocks rendering while required values are missing", async () => {

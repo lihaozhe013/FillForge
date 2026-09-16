@@ -67,6 +67,11 @@ export interface RunRepository {
   readNormalized(id: string): Promise<NormalizedRecord | null>;
   saveOutput(id: string, document: Uint8Array): Promise<RenderedArtifact>;
   listOutputs(id: string): Promise<string[]>;
+  addAttachment(
+    id: string,
+    sourcePath: string,
+    originalFilename: string,
+  ): Promise<AttachmentMetadata>;
 }
 
 export function mediaTypeForFilename(filename: string): string {
@@ -249,6 +254,31 @@ export class FileRunRepository implements RunRepository {
     } catch {
       return [];
     }
+  }
+
+  async addAttachment(
+    id: string,
+    sourcePath: string,
+    originalFilename: string,
+  ): Promise<AttachmentMetadata> {
+    await this.load(id);
+    const storedPath = await copyFileWithCollisionAvoidance(
+      sourcePath,
+      path.join(this.runDir(id), INPUT_DIR),
+      originalFilename,
+    );
+    const attachment: AttachmentMetadata = {
+      filename: path.basename(storedPath),
+      original_filename: originalFilename,
+      media_type: mediaTypeForFilename(originalFilename),
+    };
+    const metadata = await this.load(id);
+    const updated: RunMetadata = {
+      ...metadata,
+      attachments: [...metadata.attachments, attachment],
+    };
+    await writeJsonFileAtomic(this.filePath(id, METADATA_FILE), updated);
+    return attachment;
   }
 
   private async readTextOrNull(filename: string, id: string): Promise<string | null> {

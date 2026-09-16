@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -42,4 +43,22 @@ export function getHomeDirectory(): string {
 
 export function getAppPaths(): AppPaths {
   return resolveAppPaths(getHomeDirectory());
+}
+
+/**
+ * Create the canonical directory layout on first launch. Safe to call every
+ * start; it never deletes anything.
+ */
+export async function ensureAppDirectories(paths: AppPaths): Promise<void> {
+  await Promise.all(
+    [
+      paths.configDir,
+      paths.dataDir,
+      paths.templatesDir,
+      paths.runsDir,
+      paths.exportsDir,
+      paths.cacheDir,
+      paths.logsDir,
+    ].map((dir) => fs.mkdir(dir, { recursive: true })),
+  );
 }

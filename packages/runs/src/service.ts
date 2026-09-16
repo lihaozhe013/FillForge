@@ -1,3 +1,4 @@
+import path from "node:path";
 import { ValidationError } from "@docufill/core";
 import type { DocumentRenderer } from "@docufill/docx";
 import {
@@ -9,6 +10,7 @@ import {
   valueFailsFieldValidation,
 } from "@docufill/extraction";
 import {
+  type AttachmentMetadata,
   type ExtractionResult,
   PROMPT_VERSION,
   type ReviewedRecord,
@@ -20,13 +22,18 @@ import { resolveBindings, type TemplateService } from "@docufill/templates";
 import type { RenderedArtifact, RunAttachmentInput, RunRepository } from "./repository.ts";
 import { buildReviewRecord, getEffectiveValues } from "./review.ts";
 
+export interface RunOutput {
+  filename: string;
+  path: string;
+}
+
 export interface RunDetails {
   metadata: RunMetadata;
   prompt: string | null;
   extraction: ExtractionResult | null;
   review: ReviewedRecord | null;
   normalized: Record<string, unknown> | null;
-  outputs: string[];
+  outputs: RunOutput[];
 }
 
 export class RunService {
@@ -68,18 +75,30 @@ export class RunService {
       this.runRepository.readNormalized(runId),
       this.runRepository.listOutputs(runId),
     ]);
+    const outputDir = path.join(this.runRepository.runDir(runId), "output");
     return {
       metadata,
       prompt,
       extraction,
       review,
       normalized: normalized?.values ?? null,
-      outputs,
+      outputs: outputs.map((filename) => ({
+        filename,
+        path: path.join(outputDir, filename),
+      })),
     };
   }
 
   listRuns(): Promise<RunSummary[]> {
     return this.runRepository.list();
+  }
+
+  addAttachment(
+    runId: string,
+    sourcePath: string,
+    originalFilename: string,
+  ): Promise<AttachmentMetadata> {
+    return this.runRepository.addAttachment(runId, sourcePath, originalFilename);
   }
 
   async generatePrompt(runId: string): Promise<string> {

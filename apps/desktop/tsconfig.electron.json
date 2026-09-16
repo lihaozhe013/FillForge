@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": [
+    "electron",
+    "electron.vite.config.ts",
+    "src/lib/ipc-protocol.ts",
+    "src/lib/global.d.ts"
+  ]
+}

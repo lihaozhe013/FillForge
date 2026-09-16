@@ -17,7 +17,13 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "a11y": {
+        "useButtonType": "off"
+      },
+      "style": {
+        "noDescendingSpecificity": "off"
+      }
     }
   },
   "javascript": {
