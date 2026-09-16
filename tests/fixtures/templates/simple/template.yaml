@@ -1,0 +1,35 @@
+schema_version: 1
+
+id: simple-report
+name: Simple report
+description: Minimal template used by unit and integration tests
+
+document:
+  file: simple-template.docx
+
+fields:
+  title:
+    label: Title
+    description: Document title
+    type: string
+    required: true
+    extraction:
+      instruction: The main title shown on the document.
+  date:
+    label: Date
+    type: date
+    required: true
+    output:
+      format: YYYY-MM-DD
+  client_name:
+    label: Client name
+    type: string
+    required: false
+
+bindings:
+  title:
+    source: title
+  date:
+    source: date
+  client_name:
+    source: client_name

@@ -1,0 +1,22 @@
+{
+  "invoice_number": {
+    "value": "12345678",
+    "status": "found",
+    "evidence": "发票号码：12345678"
+  },
+  "invoice_date": {
+    "value": "2026年09月16日",
+    "status": "found",
+    "evidence": "开票日期：2026年09月16日"
+  },
+  "seller_name": {
+    "value": "示例科技有限公司",
+    "status": "found",
+    "evidence": "销售方名称：示例科技有限公司"
+  },
+  "total_amount": {
+    "value": 1234.5,
+    "status": "found",
+    "evidence": "价税合计：¥1234.50"
+  }
+}

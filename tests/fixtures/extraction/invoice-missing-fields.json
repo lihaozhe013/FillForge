@@ -1,0 +1,7 @@
+{
+  "invoice_number": {
+    "value": "12345678",
+    "status": "found",
+    "evidence": "发票号码：12345678"
+  }
+}

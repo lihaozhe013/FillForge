@@ -1,0 +1,75 @@
+schema_version: 1
+
+id: invoice-cn
+name: 中国发票
+description: 从中国发票提取信息并生成目标文档
+
+document:
+  file: invoice-template.docx
+
+fields:
+  invoice_number:
+    label: 发票号码
+    description: 发票上明确标注的发票号码
+    type: string
+    required: true
+
+    extraction:
+      instruction: >
+        找到明确标记为“发票号码”的值。
+        不要将“发票代码”作为发票号码。
+
+    normalization:
+      trim: true
+      remove_spaces: true
+
+    validation:
+      regex: '^[0-9A-Za-z-]+$'
+
+  invoice_date:
+    label: 开票日期
+    description: 发票票面上的开票日期
+    type: date
+    required: true
+
+    extraction:
+      instruction: >
+        提取票面上标记为开票日期的日期。
+
+    output:
+      format: YYYY-MM-DD
+
+  seller_name:
+    label: 销售方名称
+    description: 销售方企业名称
+    type: string
+    required: true
+
+    extraction:
+      instruction: >
+        从销售方区域提取企业名称。
+        不要返回购买方名称。
+
+  total_amount:
+    label: 价税合计
+    description: 发票最终含税总金额
+    type: number
+    required: true
+
+    extraction:
+      instruction: >
+        提取价税合计的小写金额。
+        不要返回税额或未税金额。
+
+bindings:
+  invoice_number:
+    source: invoice_number
+
+  invoice_date:
+    source: invoice_date
+
+  seller_name:
+    source: seller_name
+
+  total_amount:
+    source: total_amount
