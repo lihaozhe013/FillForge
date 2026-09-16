@@ -62,6 +62,14 @@ export async function readFileBinary(filePath: string): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
+export async function removePath(target: string): Promise<void> {
+  await fs.rm(target, { recursive: true, force: true });
+}
+
+export async function copyFile(source: string, destination: string): Promise<void> {
+  await fs.copyFile(source, destination);
+}
+
 /**
  * Copy a file into a directory, avoiding collisions by appending -2, -3, ...
  * while keeping the original extension. Returns the destination path.

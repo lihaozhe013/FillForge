@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/out", "!**/dist", "!**/debug-logs"]
+    "includes": ["**", "!**/out", "!**/dist", "!**/debug-logs", "!tests/fixtures"]
   },
   "formatter": {
     "enabled": true,
