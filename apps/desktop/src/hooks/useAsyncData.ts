@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppErrorDtoLike } from '../lib/ipc-protocol';
 
 export function extractError(error: unknown): AppErrorDtoLike {
@@ -22,20 +22,30 @@ export function extractError(error: unknown): AppErrorDtoLike {
  */
 export function useAsyncData<T>(
   loader: () => Promise<T>,
-  _dependencies: unknown[]
+  dependencies: unknown[]
 ): { data: T | null; error: AppErrorDtoLike | null; loading: boolean; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<AppErrorDtoLike | null>(null);
   const [loading, setLoading] = useState(true);
-  const [_tick, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
 
   const reload = useCallback(() => setTick((value) => value + 1), []);
 
+  // Callers pass inline closures, so `loader` identity changes on every render;
+  // keep it in a ref so re-renders do not retrigger the effect, while the effect
+  // always invokes the latest closure (with fresh captured props).
+  const loaderRef = useRef(loader);
+  useEffect(() => {
+    loaderRef.current = loader;
+  });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `dependencies` is a caller-supplied, variable-length key and `tick` drives manual reloads; `loader` is read through loaderRef so its per-render identity never retriggers the effect.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    loader()
+    loaderRef
+      .current()
       .then((result) => {
         if (!cancelled) {
           setData(result);
@@ -54,8 +64,7 @@ export function useAsyncData<T>(
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loader]);
+  }, [...dependencies, tick]);
 
   return { data, error, loading, reload };
 }
