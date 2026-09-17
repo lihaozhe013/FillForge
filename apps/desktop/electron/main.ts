@@ -6,6 +6,13 @@ import { createMainWindow, quitWhenAllWindowsClosedOnNonMac } from './window';
 
 app.setName('FillForge');
 
+// Escape hatch for environments where Chromium's GPU process is unstable
+// (observed with some NVIDIA/vaapi setups): FILLFORGE_DISABLE_GPU=1 pnpm dev
+if (process.env.FILLFORGE_DISABLE_GPU === '1') {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('disable-gpu');
+}
+
 app.whenReady().then(() => {
   try {
     const services = createAppServices();
