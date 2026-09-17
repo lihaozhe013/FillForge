@@ -80,9 +80,10 @@ export async function copyFileWithCollisionAvoidance(
   filename = path.basename(sourceFile)
 ): Promise<string> {
   await ensureDirectory(destinationDirectory);
-  const extension = path.extname(filename);
-  const stem = extension ? filename.slice(0, -extension.length) : filename;
-  let candidate = filename;
+  const safeFilename = path.basename(filename) || path.basename(sourceFile);
+  const extension = path.extname(safeFilename);
+  const stem = extension ? safeFilename.slice(0, -extension.length) : safeFilename;
+  let candidate = safeFilename;
   let counter = 2;
   while (await pathExists(path.join(destinationDirectory, candidate))) {
     candidate = `${stem}-${counter}${extension}`;

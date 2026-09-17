@@ -1,9 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
+  ArtifactImmutableError,
   atomicWriteFile,
   copyFileWithCollisionAvoidance,
   generateUlid,
+  InvalidIdentifierError,
+  InvalidRunArtifactError,
+  isValidUlid,
   listSubdirectories,
   pathExists,
   RunNotFoundError,
@@ -18,11 +22,16 @@ import {
   type ExtractionResult,
   type NormalizedRecord,
   type ReviewedRecord,
+  extractionResultSchema,
+  EXTRACTION_SCHEMA_VERSION,
+  persistedExtractionSchema,
   RUN_SCHEMA_VERSION,
   type RunArtifacts,
   type RunMetadata,
   type RunSummary,
-  runMetadataSchema
+  runMetadataSchema,
+  normalizedRecordSchema,
+  reviewedRecordSchema
 } from '@fillforge/schema';
 
 const METADATA_FILE = 'metadata.json';
@@ -33,6 +42,10 @@ const NORMALIZED_FILE = 'normalized.json';
 const INPUT_DIR = 'input';
 const OUTPUT_DIR = 'output';
 const LATEST_OUTPUT = 'result.docx';
+
+function safeAttachmentFilename(originalFilename: string, sourcePath: string): string {
+  return path.basename(originalFilename) || path.basename(sourcePath) || 'attachment';
+}
 
 export interface RunAttachmentInput {
   path: string;
@@ -52,6 +65,11 @@ export interface RenderedArtifact {
   filename: string;
 }
 
+export interface PromptArtifact {
+  prompt: string;
+  expectedJson: string;
+}
+
 export interface RunRepository {
   create(input: CreateRunInput): Promise<RunMetadata>;
   load(id: string): Promise<RunMetadata>;
@@ -59,12 +77,14 @@ export interface RunRepository {
   runDir(id: string): string;
   savePrompt(id: string, prompt: string, expectedJson: string): Promise<void>;
   readPrompt(id: string): Promise<string | null>;
+  readPromptArtifact?(id: string): Promise<PromptArtifact | null>;
   saveExtraction(id: string, extraction: ExtractionResult): Promise<void>;
   readExtraction(id: string): Promise<ExtractionResult | null>;
   saveReview(id: string, review: ReviewedRecord): Promise<void>;
   readReview(id: string): Promise<ReviewedRecord | null>;
   saveNormalized(id: string, values: Record<string, unknown>): Promise<void>;
   readNormalized(id: string): Promise<NormalizedRecord | null>;
+  clearNormalized?(id: string): Promise<void>;
   saveOutput(id: string, document: Uint8Array): Promise<RenderedArtifact>;
   listOutputs(id: string): Promise<string[]>;
   addAttachment(
@@ -97,6 +117,9 @@ export class FileRunRepository implements RunRepository {
   }
 
   runDir(id: string): string {
+    if (!isValidUlid(id)) {
+      throw new InvalidIdentifierError('Run', id);
+    }
     return path.join(this.runsDir, id);
   }
 
@@ -111,14 +134,15 @@ export class FileRunRepository implements RunRepository {
 
     const attachments: AttachmentMetadata[] = [];
     for (const attachment of input.attachments ?? []) {
+      const originalFilename = safeAttachmentFilename(attachment.originalFilename, attachment.path);
       const storedPath = await copyFileWithCollisionAvoidance(
         attachment.path,
         path.join(this.runDir(id), INPUT_DIR),
-        attachment.originalFilename
+        originalFilename
       );
       attachments.push({
         filename: path.basename(storedPath),
-        original_filename: attachment.originalFilename,
+        original_filename: originalFilename,
         media_type: attachment.mediaType
       });
     }
@@ -141,7 +165,15 @@ export class FileRunRepository implements RunRepository {
     if (!(await pathExists(file))) {
       throw new RunNotFoundError(id);
     }
-    const raw = await readJsonFile(file);
+    let raw: unknown;
+    try {
+      raw = await readJsonFile(file);
+    } catch (error) {
+      throw new InvalidRunArtifactError(
+        METADATA_FILE,
+        error instanceof Error ? error.message : error
+      );
+    }
     if (
       typeof raw === 'object' &&
       raw !== null &&
@@ -154,7 +186,18 @@ export class FileRunRepository implements RunRepository {
         RUN_SCHEMA_VERSION
       );
     }
-    return runMetadataSchema.parse(raw);
+    const parsed = runMetadataSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new InvalidRunArtifactError(METADATA_FILE, parsed.error.issues);
+    }
+    if (parsed.data.id !== id) {
+      throw new InvalidRunArtifactError(METADATA_FILE, {
+        message: 'Run metadata id does not match its directory.',
+        directoryId: id,
+        metadataId: parsed.data.id
+      });
+    }
+    return parsed.data;
   }
 
   async list(): Promise<RunSummary[]> {
@@ -188,28 +231,72 @@ export class FileRunRepository implements RunRepository {
   }
 
   async savePrompt(id: string, prompt: string, expectedJson: string): Promise<void> {
+    await this.load(id);
+    const file = this.filePath(id, PROMPT_FILE);
+    if (await pathExists(file)) {
+      throw new ArtifactImmutableError(PROMPT_FILE);
+    }
     const content = `${prompt}\n---\n\nExpected JSON structure:\n\n${expectedJson}\n`;
-    await writeTextFileAtomic(this.filePath(id, PROMPT_FILE), content);
+    await writeTextFileAtomic(file, content);
   }
 
   async readPrompt(id: string): Promise<string | null> {
+    await this.load(id);
     return this.readTextOrNull(PROMPT_FILE, id);
   }
 
+  async readPromptArtifact(id: string): Promise<PromptArtifact | null> {
+    const text = await this.readPrompt(id);
+    if (text === null) {
+      return null;
+    }
+    return parsePromptArtifact(text);
+  }
+
   async saveExtraction(id: string, extraction: ExtractionResult): Promise<void> {
-    await writeJsonFileAtomic(this.filePath(id, EXTRACTION_FILE), extraction);
+    await this.load(id);
+    const file = this.filePath(id, EXTRACTION_FILE);
+    if (await pathExists(file)) {
+      throw new ArtifactImmutableError(EXTRACTION_FILE);
+    }
+    const result = extractionResultSchema.safeParse(extraction);
+    if (!result.success) {
+      throw new InvalidRunArtifactError(EXTRACTION_FILE, result.error.issues);
+    }
+    await writeJsonFileAtomic(this.filePath(id, EXTRACTION_FILE), {
+      schema_version: EXTRACTION_SCHEMA_VERSION,
+      result: result.data
+    });
   }
 
   async readExtraction(id: string): Promise<ExtractionResult | null> {
-    return this.readJsonOrNull<ExtractionResult>(EXTRACTION_FILE, id);
+    const persisted = await this.readJsonArtifact(EXTRACTION_FILE, id, (raw) => {
+      const result = persistedExtractionSchema.safeParse(raw);
+      if (!result.success) {
+        throw result.error.issues;
+      }
+      return result.data;
+    });
+    return persisted?.result ?? null;
   }
 
   async saveReview(id: string, review: ReviewedRecord): Promise<void> {
-    await writeJsonFileAtomic(this.filePath(id, REVIEW_FILE), review);
+    await this.load(id);
+    const result = reviewedRecordSchema.safeParse(review);
+    if (!result.success) {
+      throw new InvalidRunArtifactError(REVIEW_FILE, result.error.issues);
+    }
+    await writeJsonFileAtomic(this.filePath(id, REVIEW_FILE), result.data);
   }
 
   async readReview(id: string): Promise<ReviewedRecord | null> {
-    return this.readJsonOrNull<ReviewedRecord>(REVIEW_FILE, id);
+    return this.readJsonArtifact(REVIEW_FILE, id, (raw) => {
+      const result = reviewedRecordSchema.safeParse(raw);
+      if (!result.success) {
+        throw result.error.issues;
+      }
+      return result.data;
+    });
   }
 
   async saveNormalized(id: string, values: Record<string, unknown>): Promise<void> {
@@ -217,11 +304,27 @@ export class FileRunRepository implements RunRepository {
       schema_version: RUN_SCHEMA_VERSION,
       values
     };
-    await writeJsonFileAtomic(this.filePath(id, NORMALIZED_FILE), record);
+    await this.load(id);
+    const result = normalizedRecordSchema.safeParse(record);
+    if (!result.success) {
+      throw new InvalidRunArtifactError(NORMALIZED_FILE, result.error.issues);
+    }
+    await writeJsonFileAtomic(this.filePath(id, NORMALIZED_FILE), result.data);
   }
 
   async readNormalized(id: string): Promise<NormalizedRecord | null> {
-    return this.readJsonOrNull<NormalizedRecord>(NORMALIZED_FILE, id);
+    return this.readJsonArtifact(NORMALIZED_FILE, id, (raw) => {
+      const result = normalizedRecordSchema.safeParse(raw);
+      if (!result.success) {
+        throw result.error.issues;
+      }
+      return result.data;
+    });
+  }
+
+  async clearNormalized(id: string): Promise<void> {
+    await this.load(id);
+    await fs.rm(this.filePath(id, NORMALIZED_FILE), { force: true });
   }
 
   /**
@@ -230,11 +333,12 @@ export class FileRunRepository implements RunRepository {
    * `result.docx` always mirrors the newest version.
    */
   async saveOutput(id: string, document: Uint8Array): Promise<RenderedArtifact> {
+    await this.load(id);
     const outputDir = path.join(this.runDir(id), OUTPUT_DIR);
     await fs.mkdir(outputDir, { recursive: true });
     const entries = await fs.readdir(outputDir);
     const versions = entries
-      .map((name) => /^result-(\d{3})\.docx$/.exec(name))
+      .map((name) => /^result-(\d+)\.docx$/.exec(name))
       .filter((match): match is RegExpExecArray => match !== null)
       .map((match) => Number(match[1]))
       .sort((a, b) => a - b);
@@ -250,7 +354,9 @@ export class FileRunRepository implements RunRepository {
     const outputDir = path.join(this.runDir(id), OUTPUT_DIR);
     try {
       const entries = await fs.readdir(outputDir);
-      return entries.filter((name) => name.endsWith('.docx')).sort();
+      return entries
+        .filter((name) => name === LATEST_OUTPUT || /^result-\d+\.docx$/.test(name))
+        .sort();
     } catch {
       return [];
     }
@@ -262,15 +368,16 @@ export class FileRunRepository implements RunRepository {
     originalFilename: string
   ): Promise<AttachmentMetadata> {
     await this.load(id);
+    const safeOriginalFilename = safeAttachmentFilename(originalFilename, sourcePath);
     const storedPath = await copyFileWithCollisionAvoidance(
       sourcePath,
       path.join(this.runDir(id), INPUT_DIR),
-      originalFilename
+      safeOriginalFilename
     );
     const attachment: AttachmentMetadata = {
       filename: path.basename(storedPath),
-      original_filename: originalFilename,
-      media_type: mediaTypeForFilename(originalFilename)
+      original_filename: safeOriginalFilename,
+      media_type: mediaTypeForFilename(safeOriginalFilename)
     };
     const metadata = await this.load(id);
     const updated: RunMetadata = {
@@ -289,11 +396,38 @@ export class FileRunRepository implements RunRepository {
     return readTextFile(file);
   }
 
-  private async readJsonOrNull<T>(filename: string, id: string): Promise<T | null> {
+  private async readJsonArtifact<T>(
+    filename: string,
+    id: string,
+    parse: (raw: unknown) => T
+  ): Promise<T | null> {
+    await this.load(id);
     const file = this.filePath(id, filename);
     if (!(await pathExists(file))) {
       return null;
     }
-    return readJsonFile(file) as Promise<T>;
+    let raw: unknown;
+    try {
+      raw = await readJsonFile(file);
+    } catch (error) {
+      throw new InvalidRunArtifactError(filename, error instanceof Error ? error.message : error);
+    }
+    try {
+      return parse(raw);
+    } catch (error) {
+      throw new InvalidRunArtifactError(filename, error);
+    }
   }
+}
+
+export function parsePromptArtifact(text: string): PromptArtifact {
+  const marker = '\n---\n\nExpected JSON structure:\n\n';
+  const markerIndex = text.indexOf(marker);
+  if (markerIndex < 0) {
+    return { prompt: text, expectedJson: '' };
+  }
+  return {
+    prompt: text.slice(0, markerIndex),
+    expectedJson: text.slice(markerIndex + marker.length).trim()
+  };
 }

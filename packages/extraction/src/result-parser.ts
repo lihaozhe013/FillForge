@@ -29,7 +29,7 @@ export function stripMarkdownFences(raw: string): string {
   return text.slice(openingEnd + 1, closingStart).trim();
 }
 
-export function parseExtractionJson(raw: string): unknown {
+export function parseExtractionJson(raw: string): ExtractionResult {
   const text = stripMarkdownFences(raw);
   let parsed: unknown;
   try {
@@ -51,5 +51,5 @@ export function parseExtractionJson(raw: string): unknown {
 }
 
 export function parseExtractionResult(raw: string): ExtractionResult {
-  return parseExtractionJson(raw) as ExtractionResult;
+  return parseExtractionJson(raw);
 }

@@ -155,7 +155,7 @@ describe('runMetadataSchema', () => {
   it('accepts spec-shaped metadata', () => {
     const parsed = runMetadataSchema.parse({
       schema_version: 1,
-      id: '01K5AEXAMPLEEXAMPLEEXAMPLE',
+      id: '01K5AEXAMP5EXAMP5EXAMP5555',
       created_at: '2026-09-16T12:30:00.000Z',
       template_id: 'invoice-cn',
       template_schema_version: 1,
@@ -174,7 +174,7 @@ describe('runMetadataSchema', () => {
   it('defaults attachments to an empty list', () => {
     const parsed = runMetadataSchema.parse({
       schema_version: 1,
-      id: '01K5AEXAMPLEEXAMPLEEXAMPLE',
+      id: '01K5AEXAMP5EXAMP5EXAMP5555',
       created_at: '2026-09-16T12:30:00.000Z',
       template_id: 'invoice-cn',
       template_schema_version: 1,
@@ -186,7 +186,7 @@ describe('runMetadataSchema', () => {
   it('rejects invalid timestamps', () => {
     const result = runMetadataSchema.safeParse({
       schema_version: 1,
-      id: '01K5AEXAMPLEEXAMPLEEXAMPLE',
+      id: '01K5AEXAMP5EXAMP5EXAMP5555',
       created_at: 'yesterday',
       template_id: 'invoice-cn',
       template_schema_version: 1,

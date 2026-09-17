@@ -1,9 +1,24 @@
 import type { ExtractionIssue } from '@fillforge/extraction';
 import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from '@fillforge/schema';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section, StatusBadge } from '../components/ui';
 import { copyToClipboard, extractError, useAsyncData } from '../hooks/useAsyncData';
+import type { AppErrorDtoLike } from '../lib/ipc-protocol';
+
+function displayValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function inputValue(value: unknown): string {
+  return value === null || value === undefined ? '' : displayValue(value).replace(/^—$/, '');
+}
 
 export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate }) {
   const run = useAsyncData(() => window.fillforge.runs.load(runId), [runId]);
@@ -14,10 +29,9 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
         : Promise.resolve(null),
     [run.data]
   );
-  const [error, setError] = useState<{ code: string; message: string } | null>(null);
+  const [error, setError] = useState<AppErrorDtoLike | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
   const [rawPaste, setRawPaste] = useState('');
   const [issues, setIssues] = useState<ExtractionIssue[]>([]);
   const [finalValues, setFinalValues] = useState<Record<string, unknown>>({});
@@ -25,9 +39,16 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
   const extraction: ExtractionResult | null = run.data?.extraction ?? null;
   const review: ReviewedRecord | null = run.data?.review ?? null;
 
-  // Seed editable final values from the model values once extraction exists.
+  const reviewKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const key of Object.keys(template.data?.fields ?? {})) keys.add(key);
+    for (const key of Object.keys(extraction ?? {})) keys.add(key);
+    for (const key of Object.keys(review?.fields ?? {})) keys.add(key);
+    return [...keys];
+  }, [extraction, review, template.data]);
+
   useEffect(() => {
-    if (!extraction) {
+    if (!extraction || !template.data) {
       return;
     }
     setFinalValues((current) => {
@@ -35,14 +56,16 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
         return current;
       }
       const seeded: Record<string, unknown> = {};
-      for (const [key, extracted] of Object.entries(extraction)) {
-        seeded[key] = extracted.value === null ? '' : String(extracted.value ?? '');
+      for (const key of reviewKeys) {
+        const reviewed = review?.fields[key];
+        const value = reviewed ? reviewed.final_value : extraction[key]?.value;
+        seeded[key] = inputValue(value);
       }
       return seeded;
     });
-  }, [extraction]);
+  }, [extraction, review, reviewKeys, template.data]);
 
-  async function act(action: () => Promise<unknown>, message?: string) {
+  async function act(action: () => Promise<unknown>, message?: string): Promise<boolean> {
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -52,8 +75,10 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
         setNotice(message);
       }
       run.reload();
+      return true;
     } catch (cause) {
       setError(extractError(cause));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -103,11 +128,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
           <button
             className="link"
             disabled={busy}
-            onClick={() =>
-              void act(async () => {
-                await window.fillforge.runs.attachFiles(runId);
-              })
-            }
+            onClick={() => void act(() => window.fillforge.runs.attachFiles(runId))}
           >
             attach files
           </button>
@@ -150,27 +171,33 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 </button>
               )}
               {run.data.prompt && (
-                <>
-                  <button
-                    className="link"
-                    onClick={() => void copyToClipboard(run.data?.prompt ?? '')}
-                  >
-                    copy prompt
-                  </button>
-                  <button
-                    className="link"
-                    onClick={() => void act(() => window.fillforge.runs.generatePrompt(runId))}
-                  >
-                    regenerate
-                  </button>
-                </>
+                <button
+                  className="link"
+                  onClick={() => void copyToClipboard(run.data?.prompt ?? '')}
+                >
+                  copy prompt
+                </button>
               )}
             </>
           )
         }
       >
         {run.data?.prompt ? (
-          <pre className="prompt-preview">{run.data.prompt}</pre>
+          <>
+            <pre className="prompt-preview">{run.data.prompt}</pre>
+            {run.data.expectedJson && (
+              <>
+                <h3>Expected JSON structure</h3>
+                <pre className="prompt-preview">{run.data.expectedJson}</pre>
+                <button
+                  className="link"
+                  onClick={() => void copyToClipboard(run.data?.expectedJson ?? '')}
+                >
+                  copy expected JSON
+                </button>
+              </>
+            )}
+          </>
         ) : (
           <p className="empty-hint">
             Generate the prompt, paste it together with your documents into any AI, then import the
@@ -180,33 +207,45 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
       </Section>
 
       <Section title="2. Paste AI result">
-        <textarea
-          rows={8}
-          placeholder={`Paste the JSON returned by the AI, e.g.\n{\n  "invoice_number": {\n    "value": "12345678",\n    "status": "found",\n    "evidence": "发票号码：12345678"\n  }\n}`}
-          value={rawPaste}
-          onChange={(event) => setRawPaste(event.target.value)}
-        />
-        <div className="row-actions">
-          <button
-            className="primary"
-            disabled={busy || rawPaste.trim() === ''}
-            onClick={async () => {
-              await act(async () => {
-                const imported = await window.fillforge.runs.importExtraction(runId, rawPaste);
-                setIssues(imported.issues);
-              }, 'Extraction imported. Review the values below.');
-              setRawPaste('');
-            }}
-          >
-            Import extraction
-          </button>
-        </div>
+        {extraction ? (
+          <p className="muted">
+            The extraction has been imported and is immutable. Use the review table below to make
+            corrections; the original model values remain in <code>extraction.json</code>.
+          </p>
+        ) : (
+          <>
+            <textarea
+              rows={8}
+              placeholder={`Paste the JSON returned by the AI, e.g.\n{\n  "invoice_number": {\n    "value": "12345678",\n    "status": "found",\n    "evidence": "invoice number"\n  }\n}`}
+              value={rawPaste}
+              onChange={(event) => setRawPaste(event.target.value)}
+            />
+            <div className="row-actions">
+              <button
+                className="primary"
+                disabled={busy || rawPaste.trim() === ''}
+                onClick={async () => {
+                  const succeeded = await act(async () => {
+                    const imported = await window.fillforge.runs.importExtraction(runId, rawPaste);
+                    setIssues(imported.issues);
+                  }, 'Extraction imported. Review the values below.');
+                  if (succeeded) {
+                    setRawPaste('');
+                    setFinalValues({});
+                  }
+                }}
+              >
+                Import extraction
+              </button>
+            </div>
+          </>
+        )}
         {issues.length > 0 && (
           <div className="issue-list">
             <strong>Validation notes (review before rendering):</strong>
             <ul>
               {issues.map((issue) => (
-                <li key={`${issue.field}:${issue.code}`}>
+                <li key={`${issue.field}:${issue.code}:${issue.message}`}>
                   <code>{issue.field}</code> — {issue.message}
                 </li>
               ))}
@@ -228,8 +267,9 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               </tr>
             </thead>
             <tbody>
-              {Object.entries(extraction).map(([key, extracted]) => {
+              {reviewKeys.map((key) => {
                 const field = template.data?.fields[key];
+                const extracted = extraction[key];
                 const reviewed = review?.fields[key];
                 return (
                   <tr key={key}>
@@ -237,20 +277,15 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                       <div>{field?.label ?? key}</div>
                       <code className="muted">{key}</code>
                     </td>
-                    <td className="model-value">
-                      {extracted.value === null ? '—' : String(extracted.value)}
-                    </td>
+                    <td className="model-value">{displayValue(extracted?.value)}</td>
                     <td>
-                      <StatusBadge status={extracted.status} />
+                      <StatusBadge status={extracted?.status ?? 'not_found'} />
                     </td>
-                    <td className="muted evidence">{extracted.evidence ?? '—'}</td>
+                    <td className="muted evidence">{extracted?.evidence ?? '—'}</td>
                     <td>
                       <input
-                        value={
-                          finalValues[key] === undefined || finalValues[key] === null
-                            ? ''
-                            : String(finalValues[key])
-                        }
+                        disabled={!field}
+                        value={inputValue(finalValues[key])}
                         onChange={(event) =>
                           setFinalValues({ ...finalValues, [key]: event.target.value })
                         }
@@ -264,17 +299,17 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
           </table>
           <p className="muted">
             Editing a value keeps the original AI value untouched: corrections are stored in{' '}
-            <code>review.json</code>, the model output stays in <code>extraction.json</code>.
+            <code>review.json</code>, while the model output stays in <code>extraction.json</code>.
           </p>
           <div className="row-actions">
             <button
               className="primary"
               disabled={busy}
               onClick={() =>
-                void act(
-                  () => window.fillforge.runs.saveReview(runId, finalValues),
-                  'Review saved.'
-                )
+                void act(async () => {
+                  const saved = await window.fillforge.runs.saveReview(runId, finalValues);
+                  setIssues(saved.issues);
+                }, 'Review saved.')
               }
             >
               Save review

@@ -24,8 +24,7 @@ export function NewRunPage({
     setError(null);
     try {
       const run = await window.fillforge.runs.create({
-        templateId: selected,
-        attachmentPaths: []
+        templateId: selected
       });
       navigate({ page: 'run', runId: run.id });
     } catch (cause) {

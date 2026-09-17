@@ -12,6 +12,7 @@
     "test": "vitest run --root ../.."
   },
   "dependencies": {
+    "@fillforge/schema": "workspace:*",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

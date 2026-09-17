@@ -1,4 +1,5 @@
 export * from './atomic-write.ts';
+export * from './config.ts';
 export * from './errors.ts';
 export * from './filesystem.ts';
 export * from './ids.ts';

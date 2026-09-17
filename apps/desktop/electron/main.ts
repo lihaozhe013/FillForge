@@ -13,9 +13,9 @@ if (process.env.FILLFORGE_DISABLE_GPU === '1') {
   app.commandLine.appendSwitch('disable-gpu');
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   try {
-    const services = createAppServices();
+    const services = await createAppServices();
     initLogger({
       isPackaged: app.isPackaged,
       logsDir: services.paths.logsDir

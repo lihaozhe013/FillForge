@@ -1,10 +1,11 @@
 import { extractError } from '../hooks/useAsyncData';
+import type { AppErrorDtoLike } from '../lib/ipc-protocol';
 
 export function ErrorBanner({
   error,
   onDismiss
 }: {
-  error: { code: string; message: string } | null;
+  error: AppErrorDtoLike | null;
   onDismiss?: () => void;
 }) {
   if (!error) {
@@ -14,6 +15,17 @@ export function ErrorBanner({
     <div className="error-banner" role="alert">
       <div>
         <strong>{error.code}</strong> — {error.message}
+        {Array.isArray(error.details) && error.details.length > 0 && (
+          <ul>
+            {error.details.slice(0, 12).map((detail) => (
+              <li key={JSON.stringify(detail) ?? String(detail)}>
+                {typeof detail === 'object' && detail !== null && 'message' in detail
+                  ? String(detail.message)
+                  : String(detail)}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {onDismiss && (
         <button className="link" onClick={onDismiss}>

@@ -1,3 +1,4 @@
+import { REVIEW_SCHEMA_VERSION } from '@fillforge/schema';
 import type {
   ExtractionResult,
   ReviewDecision,
@@ -30,11 +31,14 @@ export function decideReviewDecision(modelValue: unknown, finalValue: unknown): 
  */
 export function buildReviewRecord(
   extraction: ExtractionResult,
-  finalValues: Record<string, unknown>
+  finalValues: Record<string, unknown>,
+  fieldKeys: Iterable<string> = []
 ): ReviewedRecord {
   const fields: Record<string, ReviewedField> = {};
-  for (const [key, extracted] of Object.entries(extraction)) {
-    const modelValue = extracted.value === undefined ? null : extracted.value;
+  const keys = new Set([...Object.keys(extraction), ...Object.keys(finalValues), ...fieldKeys]);
+  for (const key of keys) {
+    const extracted = extraction[key];
+    const modelValue = extracted?.value ?? null;
     const finalValue = Object.hasOwn(finalValues, key) ? finalValues[key] : modelValue;
     fields[key] = {
       model_value: modelValue,
@@ -42,7 +46,7 @@ export function buildReviewRecord(
       decision: decideReviewDecision(modelValue, finalValue)
     };
   }
-  return { schema_version: 1, fields };
+  return { schema_version: REVIEW_SCHEMA_VERSION, fields };
 }
 
 /**
@@ -54,10 +58,12 @@ export function getEffectiveValues(
   review: ReviewedRecord | null
 ): Record<string, unknown> {
   const values: Record<string, unknown> = {};
-  for (const [key, extracted] of Object.entries(extraction)) {
+  const keys = new Set([...Object.keys(extraction), ...Object.keys(review?.fields ?? {})]);
+  for (const key of keys) {
+    const extracted = extraction[key];
     const reviewed = review?.fields[key];
     const value =
-      reviewed && Object.hasOwn(reviewed, 'final_value') ? reviewed.final_value : extracted.value;
+      reviewed && Object.hasOwn(reviewed, 'final_value') ? reviewed.final_value : extracted?.value;
     if (value !== null && value !== undefined) {
       values[key] = value;
     }

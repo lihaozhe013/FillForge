@@ -13,7 +13,12 @@ export function computePlaceholderReport(
 ): PlaceholderReport {
   const bindings = schema.bindings ?? {};
   const fieldKeys = new Set(Object.keys(schema.fields));
-  const referencedSources = new Set(Object.values(bindings).map((binding) => binding.source));
+  const placeholders = new Set(inspection.placeholders);
+  const referencedSources = new Set(
+    Object.entries(bindings)
+      .filter(([placeholder]) => placeholders.has(placeholder))
+      .map(([, binding]) => binding.source)
+  );
   return {
     placeholders: inspection.placeholders,
     unconfigured: inspection.placeholders.filter(

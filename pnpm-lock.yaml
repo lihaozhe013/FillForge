@@ -90,6 +90,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@fillforge/schema':
+        specifier: workspace:*
+        version: link:../schema
       yaml:
         specifier: ^2.9.1
         version: 2.9.1

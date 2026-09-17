@@ -4,6 +4,7 @@ import type {
   AttachmentMetadata,
   ExtractionResult,
   PlaceholderReport,
+  ResolvedAppConfig,
   ReviewedRecord,
   RunMetadata,
   RunSummary,
@@ -26,6 +27,9 @@ export const IPC = {
   templatesDelete: 'templates:delete',
   templatesPromptPreview: 'templates:prompt-preview',
 
+  settingsLoad: 'settings:load',
+  settingsSave: 'settings:save',
+
   runsCreate: 'runs:create',
   runsList: 'runs:list',
   runsLoad: 'runs:load',
@@ -44,6 +48,7 @@ export const IPC = {
 export interface RunDetailsDto {
   metadata: RunMetadata;
   prompt: string | null;
+  expectedJson: string | null;
   extraction: ExtractionResult | null;
   review: ReviewedRecord | null;
   normalized: Record<string, unknown> | null;
@@ -57,7 +62,12 @@ export interface RunOutputDto {
 
 export interface CreateRunDto {
   templateId: string;
-  attachmentPaths: string[];
+}
+
+export interface SettingsUpdateDto {
+  theme: ResolvedAppConfig['theme'];
+  showAdvancedFields: boolean;
+  promptVersion: string;
 }
 
 export interface ImportExtractionResultDto {
@@ -80,6 +90,10 @@ export interface FillForgeApi {
     duplicate(id: string): Promise<TemplateSummary>;
     delete(id: string): Promise<void>;
     promptPreview(id: string): Promise<PromptPreview | null>;
+  };
+  settings: {
+    load(): Promise<ResolvedAppConfig>;
+    save(input: SettingsUpdateDto): Promise<ResolvedAppConfig>;
   };
   runs: {
     create(input: CreateRunDto): Promise<RunMetadata>;

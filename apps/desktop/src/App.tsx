@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { HomePage } from './pages/HomePage';
 import { NewRunPage } from './pages/NewRunPage';
 import { RunPage } from './pages/RunPage';
 import { RunsPage } from './pages/RunsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { TemplateEditorPage } from './pages/TemplateEditorPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 
@@ -12,7 +13,8 @@ export type Route =
   | { page: 'templateEditor'; templateId: string }
   | { page: 'newRun'; templateId?: string }
   | { page: 'run'; runId: string }
-  | { page: 'runs' };
+  | { page: 'runs' }
+  | { page: 'settings' };
 
 export type Navigate = (route: Route) => void;
 
@@ -20,6 +22,21 @@ export function App() {
   const [route, setRoute] = useState<Route>({ page: 'home' });
 
   const navigate = useCallback<Navigate>((next) => setRoute(next), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    window.fillforge.settings
+      .load()
+      .then((config) => {
+        if (!cancelled) {
+          document.documentElement.dataset.theme = config.theme;
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="app">
@@ -52,6 +69,12 @@ export function App() {
           >
             Runs
           </button>
+          <button
+            className={route.page === 'settings' ? 'nav-item active' : 'nav-item'}
+            onClick={() => navigate({ page: 'settings' })}
+          >
+            Settings
+          </button>
         </nav>
         <div className="sidebar-footer">Local-first · files stay on this machine</div>
       </aside>
@@ -66,6 +89,7 @@ export function App() {
         )}
         {route.page === 'run' && <RunPage runId={route.runId} navigate={navigate} />}
         {route.page === 'runs' && <RunsPage navigate={navigate} />}
+        {route.page === 'settings' && <SettingsPage navigate={navigate} />}
       </main>
     </div>
   );

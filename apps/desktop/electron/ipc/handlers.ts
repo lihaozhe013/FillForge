@@ -1,7 +1,13 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
-import { copyFile, pathExists, toAppErrorDto, ValidationError } from '@fillforge/core';
+import {
+  copyFile,
+  isPathInside,
+  pathExists,
+  toAppErrorDto,
+  ValidationError
+} from '@fillforge/core';
 import { buildExtractionPrompt } from '@fillforge/extraction';
-import { mediaTypeForFilename } from '@fillforge/runs';
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { z } from 'zod';
 import type { AppErrorDtoLike, IpcResult } from '../../src/lib/ipc-protocol';
@@ -14,16 +20,12 @@ import {
   runsImportExtractionSchema,
   runsLoadSchema,
   runsSaveReviewSchema,
+  settingsSaveSchema,
   systemPathSchema,
   templatesLoadSchema,
   templatesPromptPreviewSchema,
   templatesSaveSchemaSchema
 } from './schemas';
-
-function isInside(root: string, candidate: string): boolean {
-  const relative = path.relative(root, candidate);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
 
 function focusedWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
@@ -68,8 +70,32 @@ async function requireExistingFile(filePath: string): Promise<void> {
   }
 }
 
+async function requireDataFile(target: string, dataDir: string, action: string): Promise<string> {
+  const resolved = path.resolve(target);
+  if (!isPathInside(dataDir, resolved)) {
+    throw new ValidationError(`Only files inside the FillForge data directory can be ${action}.`, {
+      path: target
+    });
+  }
+  await requireExistingFile(resolved);
+  const [realDataDir, realTarget] = await Promise.all([
+    fs.realpath(dataDir),
+    fs.realpath(resolved)
+  ]);
+  if (!isPathInside(realDataDir, realTarget)) {
+    throw new ValidationError(`Only files inside the FillForge data directory can be ${action}.`, {
+      path: target
+    });
+  }
+  const stats = await fs.stat(realTarget);
+  if (!stats.isFile()) {
+    throw new ValidationError('The selected path is not a file.', { path: target });
+  }
+  return resolved;
+}
+
 export function registerIpcHandlers(services: AppServices): void {
-  const { templateService, runService, paths } = services;
+  const { templateService, runService, paths, configRepository } = services;
 
   handle(IPC.templatesList, emptyPayloadSchema, () => templateService.listTemplates());
 
@@ -114,23 +140,31 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.templatesPromptPreview, templatesPromptPreviewSchema, async ({ id }) => {
     const template = await templateService.loadTemplate(id);
+    const config = await configRepository.loadResolved();
     try {
-      return buildExtractionPrompt(template);
+      return buildExtractionPrompt(template, config.promptVersion);
     } catch {
       // Templates without configured fields have no prompt to preview.
       return null;
     }
   });
 
-  handle(IPC.runsCreate, runsCreateSchema, ({ templateId, attachmentPaths }) =>
-    runService.createRun({
-      templateId,
-      attachments: attachmentPaths.map((filePath) => ({
-        path: filePath,
-        originalFilename: path.basename(filePath),
-        mediaType: mediaTypeForFilename(filePath)
-      }))
-    })
+  handle(IPC.settingsLoad, emptyPayloadSchema, () => configRepository.loadResolved());
+
+  handle(IPC.settingsSave, settingsSaveSchema, async (input) => {
+    await configRepository.save({
+      schema_version: 1,
+      ui: { theme: input.theme },
+      editor: { show_advanced_fields: input.showAdvancedFields },
+      extraction: { prompt_version: input.promptVersion }
+    });
+    const config = await configRepository.loadResolved();
+    runService.setPromptVersion(config.promptVersion);
+    return config;
+  });
+
+  handle(IPC.runsCreate, runsCreateSchema, ({ templateId }) =>
+    runService.createRun({ templateId })
   );
 
   handle(IPC.runsList, emptyPayloadSchema, () => runService.listRuns());
@@ -145,8 +179,7 @@ export function registerIpcHandlers(services: AppServices): void {
   });
 
   handle(IPC.runsSaveReview, runsSaveReviewSchema, async ({ id, finalValues }) => {
-    const review = await runService.saveReview(id, finalValues);
-    return { review, issues: [] };
+    return runService.saveReviewWithIssues(id, finalValues);
   });
 
   handle(IPC.runsNormalize, runsLoadSchema, ({ id }) => runService.buildNormalized(id));
@@ -175,40 +208,37 @@ export function registerIpcHandlers(services: AppServices): void {
   });
 
   handle(IPC.systemOpenPath, systemPathSchema, async ({ path: target }) => {
-    await requireExistingFile(target);
-    if (!isInside(paths.dataDir, target)) {
-      throw new ValidationError('Only files inside the FillForge data directory can be opened.', {
-        path: target
-      });
+    const safeTarget = await requireDataFile(target, paths.dataDir, 'opened');
+    const error = await shell.openPath(safeTarget);
+    if (error) {
+      throw new ValidationError('The file could not be opened.', { path: safeTarget, error });
     }
-    return shell.openPath(target);
+    return true;
   });
 
   handle(IPC.systemShowItemInFolder, systemPathSchema, async ({ path: target }) => {
-    if (!isInside(paths.dataDir, target)) {
-      throw new ValidationError('Only files inside the FillForge data directory can be revealed.', {
-        path: target
-      });
-    }
-    shell.showItemInFolder(target);
+    const safeTarget = await requireDataFile(target, paths.dataDir, 'revealed');
+    shell.showItemInFolder(safeTarget);
     return null;
   });
 
   handle(IPC.systemExportCopy, systemPathSchema, async ({ path: source }) => {
-    await requireExistingFile(source);
-    if (!isInside(paths.dataDir, source)) {
-      throw new ValidationError('Only files inside the FillForge data directory can be exported.', {
-        path: source
-      });
-    }
+    const safeSource = await requireDataFile(source, paths.dataDir, 'exported');
+    const defaultPath = path.join(paths.exportsDir, path.basename(safeSource));
     const window = focusedWindow();
     const result = window
-      ? await dialog.showSaveDialog(window, { defaultPath: path.basename(source) })
-      : await dialog.showSaveDialog({ defaultPath: path.basename(source) });
+      ? await dialog.showSaveDialog(window, {
+          defaultPath,
+          filters: [{ name: 'Word Documents', extensions: ['docx'] }]
+        })
+      : await dialog.showSaveDialog({
+          defaultPath,
+          filters: [{ name: 'Word Documents', extensions: ['docx'] }]
+        });
     if (result.canceled || !result.filePath) {
       return null;
     }
-    await copyFile(source, result.filePath);
+    await copyFile(safeSource, result.filePath);
     return result.filePath;
   });
 }

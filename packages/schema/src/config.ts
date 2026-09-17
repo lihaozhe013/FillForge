@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const appConfigSchema = z.object({
-  schema_version: z.literal(1).default(1),
+  schema_version: z.literal(1),
   ui: z
     .object({
       theme: z.enum(['system', 'light', 'dark'])
@@ -16,7 +16,7 @@ export const appConfigSchema = z.object({
     .optional(),
   extraction: z
     .object({
-      prompt_version: z.string()
+      prompt_version: z.string().min(1).max(100)
     })
     .partial()
     .optional()

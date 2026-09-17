@@ -174,11 +174,26 @@ describe('TemplateService', () => {
       obsolete_field: { label: '废弃字段', type: 'string', required: false }
     });
     await service.mergeBindings('invoice-cn', {
-      invoice_number: { source: 'invoice_number' }
+      invoice_number: { source: 'invoice_number' },
+      old_placeholder: { source: 'obsolete_field' }
     });
     const report = await service.inspectTemplate('invoice-cn');
     expect(report.unconfigured).toEqual(['invoice_date', 'seller_name', 'total_amount']);
     expect(report.unreferenced).toEqual(['obsolete_field']);
+  });
+
+  it('rejects template document paths outside the template directory', async () => {
+    const repository = await createRepository();
+    const template = await repository.create({
+      name: 'Invoice CN',
+      documentPath: FIXTURE_TEMPLATE
+    });
+    await expect(
+      repository.saveSchema('invoice-cn', {
+        ...template,
+        document: { file: '../outside.docx' }
+      })
+    ).rejects.toMatchObject({ code: 'validation_failed' });
   });
 });
 

@@ -45,6 +45,11 @@ export function getAppPaths(): AppPaths {
   return resolveAppPaths(getHomeDirectory());
 }
 
+export function isPathInside(root: string, candidate: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(candidate));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
 /**
  * Create the canonical directory layout on first launch. Safe to call every
  * start; it never deletes anything.

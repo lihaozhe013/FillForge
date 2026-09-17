@@ -56,7 +56,7 @@ export function generateUlid(now: number = Date.now()): string {
 }
 
 export function isValidUlid(value: string): boolean {
-  return /^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$/.test(value);
+  return /^[0-7][0-9ABCDEFGHJKMNPQRSTVWXYZ]{25}$/.test(value);
 }
 
 export function ulidTimestamp(id: string): number {

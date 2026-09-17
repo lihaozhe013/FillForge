@@ -116,8 +116,8 @@ describe('MVP workflow (fixture driven)', () => {
     });
     const extractionOnDisk = JSON.parse(
       await fs.readFile(path.join(home, '.local/fillforge/runs', run.id, 'extraction.json'), 'utf8')
-    ) as { seller_name: { value: string } };
-    expect(extractionOnDisk.seller_name.value).toBe('示例科技有限公司');
+    ) as { result: { seller_name: { value: string } } };
+    expect(extractionOnDisk.result.seller_name.value).toBe('示例科技有限公司');
 
     // 19. Render the final DOCX deterministically.
     const artifact = await firstSession.runService.renderRun(run.id);

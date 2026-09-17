@@ -14,17 +14,29 @@ export type TemplateBinding = z.output<typeof bindingSchema>;
 
 export const TEMPLATE_SCHEMA_VERSION = 1;
 
-export const templateSchema = z.object({
-  schema_version: z.literal(TEMPLATE_SCHEMA_VERSION),
-  id: templateIdSchema,
-  name: z.string().min(1),
-  description: z.string().optional(),
-  document: z.object({
-    file: z.string().min(1)
-  }),
-  fields: z.record(z.string(), fieldDefinitionSchema),
-  bindings: z.record(z.string(), bindingSchema).optional()
-});
+export const templateSchema = z
+  .object({
+    schema_version: z.literal(TEMPLATE_SCHEMA_VERSION),
+    id: templateIdSchema,
+    name: z.string().min(1),
+    description: z.string().optional(),
+    document: z.object({
+      file: z.string().min(1)
+    }),
+    fields: z.record(z.string(), fieldDefinitionSchema),
+    bindings: z.record(z.string(), bindingSchema).optional()
+  })
+  .superRefine((template, context) => {
+    for (const [placeholder, binding] of Object.entries(template.bindings ?? {})) {
+      if (!Object.hasOwn(template.fields, binding.source)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['bindings', placeholder, 'source'],
+          message: `Binding source "${binding.source}" is not a configured field.`
+        });
+      }
+    }
+  });
 
 export type TemplateSchema = z.output<typeof templateSchema>;
 

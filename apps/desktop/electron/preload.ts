@@ -33,6 +33,10 @@ const api: FillForgeApi = {
     delete: (id) => invoke(IPC.templatesDelete, { id }),
     promptPreview: (id) => invoke(IPC.templatesPromptPreview, { id })
   },
+  settings: {
+    load: () => invoke(IPC.settingsLoad),
+    save: (input) => invoke(IPC.settingsSave, input)
+  },
   runs: {
     create: (input) => invoke(IPC.runsCreate, input),
     list: () => invoke(IPC.runsList),

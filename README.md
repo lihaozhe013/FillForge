@@ -33,7 +33,10 @@ MVP vertical slice implemented and tested:
 - Semantic field configuration persisted as human-readable `template.yaml`
 - Deterministic extraction-prompt generation (`fillforge-extraction-v1`)
 - AI result import with Markdown-fence tolerance and Zod validation
-- Review step that preserves the original model output separately from human-corrected values
+- Review step that preserves immutable prompt and model output artifacts separately from
+  human-corrected values
+- Versioned application settings persisted in `~/.config/fillforge/config.yaml`
+- Pre-render validation for required fields, types, regex, ranges, dates, and enums
 - Binding transforms (date parts, case, trim, Chinese currency uppercase)
 - Deterministic DOCX rendering via Docxtemplater + PizZip
 - Complete run history stored as plain files
@@ -93,7 +96,7 @@ ordinary inspectable file.
 ├── metadata.json                   # schema-versioned run metadata
 ├── input/                          # source evidence (images/PDFs), untouched
 ├── prompt.md                       # generated extraction prompt (immutable)
-├── extraction.json                 # original AI output (immutable)
+├── extraction.json                 # versioned original AI output (immutable)
 ├── review.json                     # human decisions: accepted/corrected/…
 ├── normalized.json                 # normalized business record
 └── output/
@@ -116,10 +119,12 @@ Support indirection. `FILLFORGE_HOME` overrides the home directory for tests and
 2. Configure field meanings, types, extraction rules, validation, and normalization; the app writes
    readable `template.yaml`.
 3. Create a run and optionally attach source evidence (copied into `input/`).
-4. Copy the generated prompt and expected JSON shape.
+4. Copy the generated prompt and expected JSON shape; the run keeps both in an immutable prompt
+   artifact.
 5. Give prompt + documents to any AI; paste the JSON back.
 6. Review: values, status, evidence; edit or fill values by hand. The model output stays untouched
-   in `extraction.json`; corrections go to `review.json`.
+   in `extraction.json`; corrections go to `review.json`. Rendering is blocked until all configured
+   values satisfy the template rules.
 7. Normalize and render. Output DOCX files are versioned under `output/`.
 8. Reopen any run later; everything is still there as plain files.
 
@@ -145,6 +150,8 @@ Key invariants:
 - The renderer process never gets unrestricted Node/filesystem access; all operations go through
   typed IPC validated with Zod in the main process.
 - Persisted YAML/JSON files are schema-versioned and validated on load.
+- Prompt and extraction evidence are write-once; review changes invalidate derived normalized
+  values.
 - Docxtemplater is an implementation detail behind the `DocumentRenderer` interface, so future
   engines can be swapped in.
 - Business fields are decoupled from DOCX placeholders through a binding and transform registry.

@@ -69,6 +69,40 @@ export class RunNotFoundError extends AppError {
   }
 }
 
+export class InvalidIdentifierError extends AppError {
+  constructor(kind: string, value: string, options: AppErrorOptions = {}) {
+    super('invalid_identifier', `${kind} identifier "${value}" is invalid.`, options);
+  }
+}
+
+export class ArtifactImmutableError extends AppError {
+  constructor(filename: string, options: AppErrorOptions = {}) {
+    super(
+      'artifact_immutable',
+      `Artifact "${filename}" already exists and cannot be replaced.`,
+      options
+    );
+  }
+}
+
+export class InvalidRunArtifactError extends AppError {
+  constructor(filename: string, issues: unknown, options: AppErrorOptions = {}) {
+    super('invalid_run_artifact', `Run artifact "${filename}" is invalid.`, {
+      details: issues,
+      ...options
+    });
+  }
+}
+
+export class InvalidConfigError extends AppError {
+  constructor(issues: unknown, options: AppErrorOptions = {}) {
+    super('invalid_config', 'The FillForge configuration is invalid.', {
+      details: issues,
+      ...options
+    });
+  }
+}
+
 export function toAppErrorDto(error: unknown): AppErrorDto {
   if (error instanceof AppError) {
     return error.toDto();

@@ -13,12 +13,23 @@ function applyStringNormalization(value: string, field: FieldDefinition): string
 
 const DATE_INPUT_PATTERN = /^(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})日?$/;
 
-function parseDateParts(value: unknown): [string, string, string] | null {
+export function parseDateParts(value: unknown): [string, string, string] | null {
   if (typeof value !== 'string') {
     return null;
   }
   const match = DATE_INPUT_PATTERN.exec(value.trim());
   if (!match?.[1] || !match[2] || !match[3]) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
     return null;
   }
   return [match[1], match[2].padStart(2, '0'), match[3].padStart(2, '0')];
@@ -62,12 +73,18 @@ export function normalizeFieldValue(field: FieldDefinition, value: unknown): unk
           ...field,
           normalization: { trim: true }
         });
+        if (text === '') {
+          return null;
+        }
         const numeric = Number(text);
         return Number.isFinite(numeric) ? numeric : value;
       }
       return value;
     }
     case 'date': {
+      if (typeof value === 'string' && value.trim() === '') {
+        return null;
+      }
       return applyDateNormalization(value, field);
     }
     case 'boolean': {
@@ -79,6 +96,9 @@ export function normalizeFieldValue(field: FieldDefinition, value: unknown): unk
       }
       if (value === 'false') {
         return false;
+      }
+      if (typeof value === 'string' && value.trim() === '') {
+        return null;
       }
       return value;
     }

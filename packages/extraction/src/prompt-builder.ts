@@ -58,7 +58,10 @@ function describeField(key: string, field: FieldDefinition): string {
  * function of the template configuration and the prompt version; it never
  * depends on UI code, so the same schema always yields the same prompt.
  */
-export function buildExtractionPrompt(template: TemplateSchema): GeneratedPrompt {
+export function buildExtractionPrompt(
+  template: TemplateSchema,
+  promptVersion: string = PROMPT_VERSION
+): GeneratedPrompt {
   const fields = template.fields;
   const fieldKeys = Object.keys(fields);
   if (fieldKeys.length === 0) {
@@ -102,6 +105,6 @@ export function buildExtractionPrompt(template: TemplateSchema): GeneratedPrompt
   return {
     prompt: `${sections.join('\n')}\n`,
     expectedJson: buildExpectedJson(fields),
-    promptVersion: PROMPT_VERSION
+    promptVersion
   };
 }

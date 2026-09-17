@@ -6,7 +6,11 @@ import type {
 } from '@fillforge/schema';
 import { describe, expect, it } from 'vitest';
 import { formatDate, normalizeExtractionResult, normalizeFieldValue } from './normalizer.ts';
-import { validateExtractionResult } from './validator.ts';
+import {
+  validateBusinessValues,
+  validateExtractionResult,
+  validateReviewedValues
+} from './validator.ts';
 
 function fieldOf(fields: FieldDefinitions, key: string): FieldDefinition {
   const field = fields[key];
@@ -139,6 +143,38 @@ describe('validateExtractionResult', () => {
     );
     expect(issues).toEqual([]);
   });
+
+  it('flags blank required values and invalid calendar dates', () => {
+    const issues = validateExtractionResult(
+      {
+        invoice_number: extracted(''),
+        invoice_date: extracted('2026-02-30'),
+        total_amount: extracted(1)
+      },
+      invoiceTemplate
+    );
+    expect(issues.map((issue) => `${issue.field}:${issue.code}`)).toEqual([
+      'invoice_number:required_value_missing',
+      'invoice_date:invalid_date'
+    ]);
+  });
+
+  it('validates reviewed values after configured coercion', () => {
+    expect(
+      validateReviewedValues(
+        { invoice_number: '12345678', invoice_date: '2026/9/16', total_amount: '10' },
+        invoiceTemplate
+      )
+    ).toEqual([]);
+  });
+
+  it('validates every configured field before rendering', () => {
+    const issues = validateBusinessValues(
+      { invoice_number: '12345678', invoice_date: '2026-09-16', total_amount: 1 },
+      invoiceTemplate
+    );
+    expect(issues).toEqual([]);
+  });
 });
 
 describe('normalizeFieldValue', () => {
@@ -172,6 +208,10 @@ describe('normalizeFieldValue', () => {
 
   it('keeps null values null', () => {
     expect(normalizeFieldValue(fieldOf(invoiceTemplate.fields, 'remark'), null)).toBeNull();
+  });
+
+  it('does not turn a blank number into zero', () => {
+    expect(normalizeFieldValue(fieldOf(invoiceTemplate.fields, 'total_amount'), '  ')).toBeNull();
   });
 });
 

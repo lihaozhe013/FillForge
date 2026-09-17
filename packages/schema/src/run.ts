@@ -1,6 +1,11 @@
 import { z } from 'zod';
+import { templateIdSchema } from './template.ts';
 
 export const RUN_SCHEMA_VERSION = 1;
+
+export const runIdSchema = z.string().regex(/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/);
+
+export type RunId = z.output<typeof runIdSchema>;
 
 export const attachmentMetadataSchema = z.object({
   filename: z.string().min(1),
@@ -12,10 +17,10 @@ export type AttachmentMetadata = z.output<typeof attachmentMetadataSchema>;
 
 export const runMetadataSchema = z.object({
   schema_version: z.literal(RUN_SCHEMA_VERSION),
-  id: z.string().min(1),
+  id: runIdSchema,
   created_at: z.iso.datetime(),
-  template_id: z.string().min(1),
-  template_schema_version: z.number().int(),
+  template_id: templateIdSchema,
+  template_schema_version: z.number().int().positive(),
   prompt_version: z.string().min(1),
   attachments: z.array(attachmentMetadataSchema).default([])
 });
@@ -28,6 +33,14 @@ export interface RunArtifacts {
   review: boolean;
   normalized: boolean;
   output: boolean;
+}
+
+export type ArtifactKind = 'prompt' | 'extraction' | 'review' | 'normalized' | 'output';
+
+export interface Artifact {
+  kind: ArtifactKind;
+  path: string;
+  immutable: boolean;
 }
 
 export interface RunSummary {

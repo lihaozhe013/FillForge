@@ -17,6 +17,8 @@ const TRANSFORMS = [
   'chinese_currency_uppercase'
 ] as const;
 
+type FieldValidation = NonNullable<FieldDefinition['validation']>;
+
 export function TemplateEditorPage({
   templateId,
   navigate
@@ -81,6 +83,28 @@ export function TemplateEditorPage({
         ...draft.fields,
         [key]: { ...current, ...patch }
       }
+    });
+  }
+
+  function updateValidation<K extends keyof FieldValidation>(
+    key: string,
+    property: K,
+    value: FieldValidation[K] | undefined
+  ) {
+    if (!draft) return;
+    const current = draft.fields[key]?.validation ?? {};
+    const validation = { ...current } as FieldValidation;
+    const empty =
+      value === undefined ||
+      (typeof value === 'string' && value === '') ||
+      (Array.isArray(value) && value.length === 0);
+    if (empty) {
+      delete validation[property];
+    } else {
+      validation[property] = value as FieldValidation[K];
+    }
+    updateField(key, {
+      validation: Object.keys(validation).length === 0 ? undefined : validation
     });
   }
 
@@ -266,12 +290,70 @@ export function TemplateEditorPage({
                   <input
                     value={field.validation?.regex ?? ''}
                     placeholder="^[0-9A-Za-z-]+$"
+                    onChange={(event) => updateValidation(key, 'regex', event.target.value)}
+                  />
+                </label>
+                <label>
+                  Minimum
+                  <input
+                    type="number"
+                    value={field.validation?.minimum ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      updateValidation(
+                        key,
+                        'minimum',
+                        value === ''
+                          ? undefined
+                          : Number.isFinite(Number(value))
+                            ? Number(value)
+                            : undefined
+                      );
+                    }}
+                  />
+                </label>
+                <label>
+                  Maximum
+                  <input
+                    type="number"
+                    value={field.validation?.maximum ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      updateValidation(
+                        key,
+                        'maximum',
+                        value === ''
+                          ? undefined
+                          : Number.isFinite(Number(value))
+                            ? Number(value)
+                            : undefined
+                      );
+                    }}
+                  />
+                </label>
+                <label>
+                  Enum values (comma-separated)
+                  <input
+                    value={field.validation?.enum?.join(', ') ?? ''}
                     onChange={(event) =>
-                      updateField(key, {
-                        validation:
-                          event.target.value === '' ? undefined : { regex: event.target.value }
-                      })
+                      updateValidation(
+                        key,
+                        'enum',
+                        event.target.value
+                          .split(',')
+                          .map((value) => value.trim())
+                          .filter(Boolean)
+                      )
                     }
+                  />
+                </label>
+                <label>
+                  Validation date format
+                  <input
+                    value={field.validation?.date_format ?? ''}
+                    placeholder="YYYY-MM-DD"
+                    disabled={field.type !== 'date'}
+                    onChange={(event) => updateValidation(key, 'date_format', event.target.value)}
                   />
                 </label>
                 <label>
@@ -421,7 +503,17 @@ export function TemplateEditorPage({
       >
         {preview.loading && <p className="empty-hint">Loading…</p>}
         {preview.data ? (
-          <pre className="prompt-preview">{preview.data.prompt}</pre>
+          <>
+            <pre className="prompt-preview">{preview.data.prompt}</pre>
+            <h3>Expected JSON structure</h3>
+            <pre className="prompt-preview">{preview.data.expectedJson}</pre>
+            <button
+              className="link"
+              onClick={() => void copyToClipboard(preview.data?.expectedJson ?? '')}
+            >
+              copy expected JSON
+            </button>
+          </>
         ) : (
           !preview.loading && (
             <p className="empty-hint">

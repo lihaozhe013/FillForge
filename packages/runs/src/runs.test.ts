@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { ValidationError } from '@fillforge/core';
+import { ArtifactImmutableError, InvalidRunArtifactError, ValidationError } from '@fillforge/core';
 import { createDocxtemplaterRenderer } from '@fillforge/docx';
 import type { ExtractionResult, ReviewedRecord } from '@fillforge/schema';
 import { TemplateService } from '@fillforge/templates';
@@ -92,8 +92,8 @@ describe('RunService end to end', () => {
     const prompt = await runService.generatePrompt(run.id);
     expect(prompt).toContain('invoice_number');
     expect(prompt).toContain('Meaning: 发票号码');
-    const savedPrompt = await runService.getPrompt(run.id);
-    expect(savedPrompt).toContain('Expected JSON structure');
+    const promptArtifact = await runRepository.readPromptArtifact?.(run.id);
+    expect(promptArtifact?.expectedJson).toContain('invoice_number');
 
     const { result, issues } = await runService.importExtraction(run.id, validExtraction);
     // The raw model value " 1234 5678 " fails the regex before normalization;
@@ -116,8 +116,8 @@ describe('RunService end to end', () => {
     // The original AI output stays untouched on disk.
     const extractionOnDisk = JSON.parse(
       await fs.readFile(path.join(runRepository.runDir(run.id), 'extraction.json'), 'utf8')
-    ) as { invoice_number: { value: string } };
-    expect(extractionOnDisk.invoice_number.value).toBe(' 1234 5678 ');
+    ) as { result: { invoice_number: { value: string } } };
+    expect(extractionOnDisk.result.invoice_number.value).toBe(' 1234 5678 ');
 
     const normalized = await runService.buildNormalized(run.id);
     expect(normalized).toEqual({
@@ -161,6 +161,59 @@ describe('RunService end to end', () => {
       'result-002.docx',
       'result.docx'
     ]);
+  });
+
+  it('keeps prompt and extraction evidence immutable', async () => {
+    const { runService, runRepository, templateService } = await createServices();
+    await setupInvoiceTemplate(templateService);
+    const run = await runService.createRun({ templateId: 'invoice-cn' });
+
+    const firstPrompt = await runService.generatePrompt(run.id);
+    expect(await runService.generatePrompt(run.id)).toBe(firstPrompt);
+    const promptFile = path.join(runRepository.runDir(run.id), 'prompt.md');
+    const promptOnDisk = await fs.readFile(promptFile, 'utf8');
+    expect((await runRepository.readPromptArtifact?.(run.id))?.expectedJson).toContain(
+      'invoice_date'
+    );
+
+    await runService.importExtraction(run.id, validExtraction);
+    await expect(runService.importExtraction(run.id, validExtraction)).rejects.toBeInstanceOf(
+      ArtifactImmutableError
+    );
+    expect(await fs.readFile(promptFile, 'utf8')).toBe(promptOnDisk);
+  });
+
+  it('invalidates normalized values when review changes', async () => {
+    const { runService, runRepository, templateService } = await createServices();
+    await setupInvoiceTemplate(templateService);
+    const run = await runService.createRun({ templateId: 'invoice-cn' });
+    await runService.importExtraction(run.id, validExtraction);
+    await runService.saveReview(run.id, {});
+    await runService.buildNormalized(run.id);
+    await expect(
+      fs.access(path.join(runRepository.runDir(run.id), 'normalized.json'))
+    ).resolves.toBeUndefined();
+
+    const first = await runService.renderRun(run.id);
+    await runService.saveReview(run.id, { invoice_number: '99887766' });
+    await expect(
+      fs.access(path.join(runRepository.runDir(run.id), 'normalized.json'))
+    ).rejects.toMatchObject({
+      code: 'ENOENT'
+    });
+    const second = await runService.renderRun(run.id);
+    expect(first.filename).toBe('result-001.docx');
+    expect(second.filename).toBe('result-002.docx');
+    expect(await outputText(second.path)).toContain('发票号码：99887766');
+  });
+
+  it('rejects malformed persisted run artifacts on reload', async () => {
+    const { runService, runRepository, templateService } = await createServices();
+    await setupInvoiceTemplate(templateService);
+    const run = await runService.createRun({ templateId: 'invoice-cn' });
+    await runService.importExtraction(run.id, validExtraction);
+    await fs.writeFile(path.join(runRepository.runDir(run.id), 'review.json'), '{not-json');
+    await expect(runRepository.readReview(run.id)).rejects.toBeInstanceOf(InvalidRunArtifactError);
   });
 
   it('blocks rendering while required values are missing', async () => {

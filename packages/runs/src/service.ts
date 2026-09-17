@@ -1,13 +1,14 @@
 import path from 'node:path';
-import { ValidationError } from '@fillforge/core';
+import { ArtifactImmutableError, ValidationError } from '@fillforge/core';
 import type { DocumentRenderer } from '@fillforge/docx';
 import {
   buildExtractionPrompt,
   type ExtractionIssue,
   normalizeValues,
   parseExtractionResult,
+  validateBusinessValues,
   validateExtractionResult,
-  valueFailsFieldValidation
+  validateReviewedValues
 } from '@fillforge/extraction';
 import {
   type AttachmentMetadata,
@@ -19,7 +20,12 @@ import {
   type TemplateSchema
 } from '@fillforge/schema';
 import { resolveBindings, type TemplateService } from '@fillforge/templates';
-import type { RenderedArtifact, RunAttachmentInput, RunRepository } from './repository.ts';
+import {
+  parsePromptArtifact,
+  type RenderedArtifact,
+  type RunAttachmentInput,
+  type RunRepository
+} from './repository.ts';
 import { buildReviewRecord, getEffectiveValues } from './review.ts';
 
 export interface RunOutput {
@@ -30,6 +36,7 @@ export interface RunOutput {
 export interface RunDetails {
   metadata: RunMetadata;
   prompt: string | null;
+  expectedJson: string | null;
   extraction: ExtractionResult | null;
   review: ReviewedRecord | null;
   normalized: Record<string, unknown> | null;
@@ -43,14 +50,18 @@ export class RunService {
 
   private readonly renderer: DocumentRenderer;
 
+  private promptVersion: string;
+
   constructor(
     runRepository: RunRepository,
     templateService: TemplateService,
-    renderer: DocumentRenderer
+    renderer: DocumentRenderer,
+    promptVersion: string = PROMPT_VERSION
   ) {
     this.runRepository = runRepository;
     this.templateService = templateService;
     this.renderer = renderer;
+    this.promptVersion = promptVersion;
   }
 
   async createRun(input: {
@@ -61,15 +72,15 @@ export class RunService {
     return this.runRepository.create({
       templateId: template.id,
       templateSchemaVersion: template.schema_version,
-      promptVersion: PROMPT_VERSION,
+      promptVersion: this.promptVersion,
       attachments: input.attachments
     });
   }
 
   async getRun(runId: string): Promise<RunDetails> {
     const metadata = await this.runRepository.load(runId);
-    const [prompt, extraction, review, normalized, outputs] = await Promise.all([
-      this.runRepository.readPrompt(runId),
+    const [promptArtifact, extraction, review, normalized, outputs] = await Promise.all([
+      this.readPromptArtifact(runId),
       this.runRepository.readExtraction(runId),
       this.runRepository.readReview(runId),
       this.runRepository.readNormalized(runId),
@@ -78,7 +89,8 @@ export class RunService {
     const outputDir = path.join(this.runRepository.runDir(runId), 'output');
     return {
       metadata,
-      prompt,
+      prompt: promptArtifact?.prompt ?? null,
+      expectedJson: promptArtifact?.expectedJson ?? null,
       extraction,
       review,
       normalized: normalized?.values ?? null,
@@ -93,6 +105,10 @@ export class RunService {
     return this.runRepository.list();
   }
 
+  setPromptVersion(promptVersion: string): void {
+    this.promptVersion = promptVersion;
+  }
+
   addAttachment(
     runId: string,
     sourcePath: string,
@@ -102,20 +118,28 @@ export class RunService {
   }
 
   async generatePrompt(runId: string): Promise<string> {
+    const existing = await this.readPromptArtifact(runId);
+    if (existing) {
+      return existing.prompt;
+    }
+    const run = await this.runRepository.load(runId);
     const template = await this.loadRunTemplate(runId);
-    const generated = buildExtractionPrompt(template);
+    const generated = buildExtractionPrompt(template, run.prompt_version);
     await this.runRepository.savePrompt(runId, generated.prompt, generated.expectedJson);
     return generated.prompt;
   }
 
   async getPrompt(runId: string): Promise<string | null> {
-    return this.runRepository.readPrompt(runId);
+    return (await this.readPromptArtifact(runId))?.prompt ?? null;
   }
 
   async importExtraction(
     runId: string,
     raw: string
   ): Promise<{ result: ExtractionResult; issues: ExtractionIssue[] }> {
+    if (await this.runRepository.readExtraction(runId)) {
+      throw new ArtifactImmutableError('extraction.json');
+    }
     const template = await this.loadRunTemplate(runId);
     const result = parseExtractionResult(raw);
     const issues = validateExtractionResult(result, template);
@@ -128,21 +152,23 @@ export class RunService {
    * corrections live only in review.json.
    */
   async saveReview(runId: string, finalValues: Record<string, unknown>): Promise<ReviewedRecord> {
+    return (await this.saveReviewWithIssues(runId, finalValues)).review;
+  }
+
+  async saveReviewWithIssues(
+    runId: string,
+    finalValues: Record<string, unknown>
+  ): Promise<{ review: ReviewedRecord; issues: ExtractionIssue[] }> {
     const extraction = await this.requireExtraction(runId);
     const template = await this.loadRunTemplate(runId);
-    const record = buildReviewRecord(extraction, finalValues);
-    const issues: ExtractionIssue[] = [];
-    for (const [key, field] of Object.entries(template.fields)) {
-      if (Object.hasOwn(finalValues, key) && valueFailsFieldValidation(field, finalValues[key])) {
-        issues.push({
-          field: key,
-          code: 'rule_violation',
-          message: `Field "${key}" violates its validation rules.`
-        });
-      }
-    }
+    const record = buildReviewRecord(extraction, finalValues, Object.keys(template.fields));
+    const reviewedValues = Object.fromEntries(
+      Object.entries(record.fields).map(([key, field]) => [key, field.final_value])
+    );
+    const issues = validateReviewedValues(reviewedValues, template);
     await this.runRepository.saveReview(runId, record);
-    return record;
+    await this.runRepository.clearNormalized?.(runId);
+    return { review: record, issues };
   }
 
   async buildNormalized(runId: string): Promise<Record<string, unknown>> {
@@ -157,9 +183,7 @@ export class RunService {
 
   async renderRun(runId: string): Promise<RenderedArtifact> {
     const template = await this.loadRunTemplate(runId);
-    const values =
-      (await this.runRepository.readNormalized(runId))?.values ??
-      (await this.buildNormalized(runId));
+    const values = await this.buildNormalized(runId);
 
     this.assertRenderable(template, values);
 
@@ -170,27 +194,7 @@ export class RunService {
   }
 
   private assertRenderable(template: TemplateSchema, values: Record<string, unknown>): void {
-    const issues: ExtractionIssue[] = [];
-    for (const [key, field] of Object.entries(template.fields)) {
-      if (!field.required) {
-        continue;
-      }
-      if (!Object.hasOwn(values, key)) {
-        issues.push({
-          field: key,
-          code: 'required_value_missing',
-          message: `Required field "${key}" (${field.label}) has no reviewed value.`
-        });
-        continue;
-      }
-      if (valueFailsFieldValidation(field, values[key])) {
-        issues.push({
-          field: key,
-          code: 'rule_violation',
-          message: `Field "${key}" (${field.label}) violates its validation rules.`
-        });
-      }
-    }
+    const issues = validateBusinessValues(values, template);
     if (issues.length > 0) {
       throw new ValidationError(
         'The run is not ready to render; review the flagged fields first.',
@@ -212,5 +216,13 @@ export class RunService {
       });
     }
     return extraction;
+  }
+
+  private async readPromptArtifact(runId: string) {
+    if (this.runRepository.readPromptArtifact) {
+      return this.runRepository.readPromptArtifact(runId);
+    }
+    const raw = await this.runRepository.readPrompt(runId);
+    return raw === null ? null : parsePromptArtifact(raw);
   }
 }

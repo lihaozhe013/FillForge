@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { getAppPaths, resolveAppPaths } from './paths.ts';
+import { getAppPaths, isPathInside, resolveAppPaths } from './paths.ts';
 
 const originalHome = process.env.FILLFORGE_HOME;
 
@@ -51,5 +51,14 @@ describe('getAppPaths', () => {
     const paths = getAppPaths();
     expect(paths.home).toBe(fakeHome);
     expect(paths.configDir.startsWith(fakeHome)).toBe(true);
+  });
+});
+
+describe('isPathInside', () => {
+  it('rejects traversal and sibling paths', () => {
+    const root = path.resolve('/tmp/fillforge-data');
+    expect(isPathInside(root, path.join(root, 'runs', 'result.docx'))).toBe(true);
+    expect(isPathInside(root, path.join(root, '..', 'outside.txt'))).toBe(false);
+    expect(isPathInside(root, `${root}-backup/result.docx`)).toBe(false);
   });
 });
