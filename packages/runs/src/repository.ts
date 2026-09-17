@@ -12,7 +12,7 @@ import {
   UnsupportedSchemaVersionError,
   writeJsonFileAtomic,
   writeTextFileAtomic
-} from '@docufill/core';
+} from '@fillforge/core';
 import {
   type AttachmentMetadata,
   type ExtractionResult,
@@ -23,7 +23,7 @@ import {
   type RunMetadata,
   type RunSummary,
   runMetadataSchema
-} from '@docufill/schema';
+} from '@fillforge/schema';
 
 const METADATA_FILE = 'metadata.json';
 const PROMPT_FILE = 'prompt.md';

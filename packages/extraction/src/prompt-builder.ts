@@ -3,7 +3,7 @@ import {
   type FieldDefinitions,
   PROMPT_VERSION,
   type TemplateSchema
-} from '@docufill/schema';
+} from '@fillforge/schema';
 
 export interface GeneratedPrompt {
   prompt: string;

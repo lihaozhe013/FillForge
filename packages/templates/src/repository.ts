@@ -13,14 +13,14 @@ import {
   TemplateNotFoundError,
   UnsupportedSchemaVersionError,
   writeYamlFileAtomic
-} from '@docufill/core';
+} from '@fillforge/core';
 import {
   type CreateTemplateInput,
   TEMPLATE_SCHEMA_VERSION,
   type TemplateSchema,
   type TemplateSummary,
   templateSchema
-} from '@docufill/schema';
+} from '@fillforge/schema';
 
 const TEMPLATE_CONFIG_FILE = 'template.yaml';
 const TEMPLATE_DOCUMENT_FILE = 'template.docx';

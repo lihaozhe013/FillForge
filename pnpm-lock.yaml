@@ -10,7 +10,7 @@ importers:
       '@biomejs/biome':
         specifier: ^2.5.14
         version: 2.5.14
-      '@docufill/tools':
+      '@fillforge/tools':
         specifier: workspace:*
         version: link:packages/tools
       '@types/node':
@@ -31,22 +31,22 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@docufill/core':
+      '@fillforge/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@docufill/docx':
+      '@fillforge/docx':
         specifier: workspace:*
         version: link:../../packages/docx
-      '@docufill/extraction':
+      '@fillforge/extraction':
         specifier: workspace:*
         version: link:../../packages/extraction
-      '@docufill/runs':
+      '@fillforge/runs':
         specifier: workspace:*
         version: link:../../packages/runs
-      '@docufill/schema':
+      '@fillforge/schema':
         specifier: workspace:*
         version: link:../../packages/schema
-      '@docufill/templates':
+      '@fillforge/templates':
         specifier: workspace:*
         version: link:../../packages/templates
       react:
@@ -96,7 +96,7 @@ importers:
 
   packages/docx:
     dependencies:
-      '@docufill/core':
+      '@fillforge/core':
         specifier: workspace:*
         version: link:../core
       docxtemplater:
@@ -112,10 +112,10 @@ importers:
 
   packages/extraction:
     dependencies:
-      '@docufill/core':
+      '@fillforge/core':
         specifier: workspace:*
         version: link:../core
-      '@docufill/schema':
+      '@fillforge/schema':
         specifier: workspace:*
         version: link:../schema
     devDependencies:
@@ -125,19 +125,19 @@ importers:
 
   packages/runs:
     dependencies:
-      '@docufill/core':
+      '@fillforge/core':
         specifier: workspace:*
         version: link:../core
-      '@docufill/docx':
+      '@fillforge/docx':
         specifier: workspace:*
         version: link:../docx
-      '@docufill/extraction':
+      '@fillforge/extraction':
         specifier: workspace:*
         version: link:../extraction
-      '@docufill/schema':
+      '@fillforge/schema':
         specifier: workspace:*
         version: link:../schema
-      '@docufill/templates':
+      '@fillforge/templates':
         specifier: workspace:*
         version: link:../templates
     devDependencies:
@@ -153,14 +153,14 @@ importers:
 
   packages/templates:
     dependencies:
-      '@docufill/core':
+      '@fillforge/core':
         specifier: workspace:*
         version: link:../core
-      '@docufill/schema':
+      '@fillforge/schema':
         specifier: workspace:*
         version: link:../schema
     devDependencies:
-      '@docufill/docx':
+      '@fillforge/docx':
         specifier: workspace:*
         version: link:../docx
       '@types/node':
@@ -169,22 +169,22 @@ importers:
 
   packages/tools:
     dependencies:
-      '@docufill/core':
+      '@fillforge/core':
         specifier: workspace:*
         version: link:../core
-      '@docufill/docx':
+      '@fillforge/docx':
         specifier: workspace:*
         version: link:../docx
-      '@docufill/extraction':
+      '@fillforge/extraction':
         specifier: workspace:*
         version: link:../extraction
-      '@docufill/runs':
+      '@fillforge/runs':
         specifier: workspace:*
         version: link:../runs
-      '@docufill/schema':
+      '@fillforge/schema':
         specifier: workspace:*
         version: link:../schema
-      '@docufill/templates':
+      '@fillforge/templates':
         specifier: workspace:*
         version: link:../templates
     devDependencies:

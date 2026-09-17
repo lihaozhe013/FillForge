@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppErrorDtoLike, DocufillApi, IpcResult } from '../src/lib/ipc-protocol';
+import type { AppErrorDtoLike, FillForgeApi, IpcResult } from '../src/lib/ipc-protocol';
 import { IPC } from '../src/lib/ipc-protocol';
 
 export class IpcError extends Error {
@@ -22,7 +22,7 @@ async function invoke<T>(channel: string, payload?: unknown): Promise<T> {
   return result.data;
 }
 
-const api: DocufillApi = {
+const api: FillForgeApi = {
   templates: {
     list: () => invoke(IPC.templatesList),
     import: () => invoke(IPC.templatesImport),
@@ -51,4 +51,4 @@ const api: DocufillApi = {
   }
 };
 
-contextBridge.exposeInMainWorld('docufill', api);
+contextBridge.exposeInMainWorld('fillforge', api);

@@ -6,8 +6,8 @@ import {
   InvalidTemplateSchemaError,
   UnsupportedSchemaVersionError,
   writeYamlFileAtomic
-} from '@docufill/core';
-import { createDocxtemplaterRenderer } from '@docufill/docx';
+} from '@fillforge/core';
+import { createDocxtemplaterRenderer } from '@fillforge/docx';
 import { describe, expect, it } from 'vitest';
 import { computePlaceholderReport } from './inspect.ts';
 import { FileTemplateRepository } from './repository.ts';
@@ -19,8 +19,8 @@ const FIXTURE_TEMPLATE = path.resolve(
 );
 
 async function createTempTemplatesDir(): Promise<string> {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-repo-'));
-  const templatesDir = path.join(home, '.local', 'docufill', 'templates');
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-repo-'));
+  const templatesDir = path.join(home, '.local', 'fillforge', 'templates');
   await fs.mkdir(templatesDir, { recursive: true });
   return templatesDir;
 }

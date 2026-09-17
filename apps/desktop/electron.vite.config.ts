@@ -3,12 +3,12 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
 const workspacePackages = [
-  '@docufill/core',
-  '@docufill/docx',
-  '@docufill/extraction',
-  '@docufill/runs',
-  '@docufill/schema',
-  '@docufill/templates'
+  '@fillforge/core',
+  '@fillforge/docx',
+  '@fillforge/extraction',
+  '@fillforge/runs',
+  '@fillforge/schema',
+  '@fillforge/templates'
 ];
 
 export default defineConfig({

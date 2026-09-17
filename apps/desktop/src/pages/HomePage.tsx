@@ -1,12 +1,12 @@
-import type { RunSummary, TemplateSummary } from '@docufill/schema';
+import type { RunSummary, TemplateSummary } from '@fillforge/schema';
 import { useState } from 'react';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
 import { extractError, useAsyncData } from '../hooks/useAsyncData';
 
 export function HomePage({ navigate }: { navigate: Navigate }) {
-  const templates = useAsyncData(() => window.docufill.templates.list(), []);
-  const runs = useAsyncData(() => window.docufill.runs.list(), []);
+  const templates = useAsyncData(() => window.fillforge.templates.list(), []);
+  const runs = useAsyncData(() => window.fillforge.runs.list(), []);
   const [actionError, setActionError] = useState<{ code: string; message: string } | null>(null);
 
   const error = actionError ?? templates.error ?? runs.error;
@@ -15,7 +15,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   async function importTemplate() {
     try {
       setActionError(null);
-      await window.docufill.templates.import();
+      await window.fillforge.templates.import();
       templates.reload();
     } catch (cause) {
       setActionError(extractError(cause));

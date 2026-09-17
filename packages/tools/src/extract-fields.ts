@@ -1,4 +1,4 @@
-import { buildExtractionPrompt } from '@docufill/extraction';
+import { buildExtractionPrompt } from '@fillforge/extraction';
 import type { AppContext } from './context.ts';
 
 /**

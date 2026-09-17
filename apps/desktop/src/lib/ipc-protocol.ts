@@ -1,5 +1,5 @@
-import type { ExtractionIssue } from '@docufill/extraction';
-import type { RenderedArtifact } from '@docufill/runs';
+import type { ExtractionIssue } from '@fillforge/extraction';
+import type { RenderedArtifact } from '@fillforge/runs';
 import type {
   AttachmentMetadata,
   ExtractionResult,
@@ -9,7 +9,7 @@ import type {
   RunSummary,
   TemplateSchema,
   TemplateSummary
-} from '@docufill/schema';
+} from '@fillforge/schema';
 
 export interface PromptPreview {
   prompt: string;
@@ -70,7 +70,7 @@ export interface ReviewSaveResultDto {
   issues: ExtractionIssue[];
 }
 
-export interface DocufillApi {
+export interface FillForgeApi {
   templates: {
     list(): Promise<TemplateSummary[]>;
     import(): Promise<TemplateSummary | null>;

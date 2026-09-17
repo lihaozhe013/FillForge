@@ -1,5 +1,5 @@
 {
-  "name": "@docufill/tools",
+  "name": "@fillforge/tools",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,12 +12,12 @@
     "test": "vitest run --root ../.."
   },
   "dependencies": {
-    "@docufill/core": "workspace:*",
-    "@docufill/docx": "workspace:*",
-    "@docufill/extraction": "workspace:*",
-    "@docufill/runs": "workspace:*",
-    "@docufill/schema": "workspace:*",
-    "@docufill/templates": "workspace:*"
+    "@fillforge/core": "workspace:*",
+    "@fillforge/docx": "workspace:*",
+    "@fillforge/extraction": "workspace:*",
+    "@fillforge/runs": "workspace:*",
+    "@fillforge/schema": "workspace:*",
+    "@fillforge/templates": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.3"

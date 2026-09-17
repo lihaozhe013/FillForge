@@ -1,8 +1,8 @@
-import { type AppPaths, ensureAppDirectories, getAppPaths } from '@docufill/core';
-import type { DocumentRenderer } from '@docufill/docx';
-import { createDocxtemplaterRenderer } from '@docufill/docx';
-import { FileRunRepository, RunService } from '@docufill/runs';
-import { TemplateService } from '@docufill/templates';
+import { type AppPaths, ensureAppDirectories, getAppPaths } from '@fillforge/core';
+import type { DocumentRenderer } from '@fillforge/docx';
+import { createDocxtemplaterRenderer } from '@fillforge/docx';
+import { FileRunRepository, RunService } from '@fillforge/runs';
+import { TemplateService } from '@fillforge/templates';
 
 export interface AppServices {
   paths: AppPaths;

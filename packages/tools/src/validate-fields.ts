@@ -1,10 +1,10 @@
-import { readFileBinary } from '@docufill/core';
+import { readFileBinary } from '@fillforge/core';
 import {
   type ExtractionIssue,
   normalizeValues,
   parseExtractionResult,
   validateExtractionResult
-} from '@docufill/extraction';
+} from '@fillforge/extraction';
 import type { AppContext } from './context.ts';
 
 export interface ValidateFieldsOptions {

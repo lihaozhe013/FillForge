@@ -25,7 +25,7 @@ export function App() {
     <div className="app">
       <aside className="sidebar">
         <button type="button" className="brand" onClick={() => navigate({ page: 'home' })}>
-          Docufill
+          FillForge
         </button>
         <nav>
           <button

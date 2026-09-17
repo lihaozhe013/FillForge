@@ -1,5 +1,5 @@
 {
-  "name": "@docufill/schema",
+  "name": "@fillforge/schema",
   "version": "0.1.0",
   "private": true,
   "type": "module",

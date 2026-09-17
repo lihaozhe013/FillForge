@@ -4,7 +4,7 @@ import { initLogger, logAppEvent } from './logger';
 import { createAppServices } from './services';
 import { createMainWindow, quitWhenAllWindowsClosedOnNonMac } from './window';
 
-app.setName('Docufill');
+app.setName('FillForge');
 
 app.whenReady().then(() => {
   try {

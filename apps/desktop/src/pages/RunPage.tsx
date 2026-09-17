@@ -1,16 +1,16 @@
-import type { ExtractionIssue } from '@docufill/extraction';
-import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from '@docufill/schema';
+import type { ExtractionIssue } from '@fillforge/extraction';
+import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from '@fillforge/schema';
 import { useEffect, useState } from 'react';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section, StatusBadge } from '../components/ui';
 import { copyToClipboard, extractError, useAsyncData } from '../hooks/useAsyncData';
 
 export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate }) {
-  const run = useAsyncData(() => window.docufill.runs.load(runId), [runId]);
+  const run = useAsyncData(() => window.fillforge.runs.load(runId), [runId]);
   const template = useAsyncData(
     () =>
       run.data
-        ? window.docufill.templates.load(run.data.metadata.template_id)
+        ? window.fillforge.templates.load(run.data.metadata.template_id)
         : Promise.resolve(null),
     [run.data]
   );
@@ -91,7 +91,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               <code>{metadata.prompt_version}</code>
             </div>
             <div>
-              Directory: <code>~/.local/docufill/runs/{metadata.id}/</code>
+              Directory: <code>~/.local/fillforge/runs/{metadata.id}/</code>
             </div>
           </div>
         </Section>
@@ -105,7 +105,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
             disabled={busy}
             onClick={() =>
               void act(async () => {
-                await window.docufill.runs.attachFiles(runId);
+                await window.fillforge.runs.attachFiles(runId);
               })
             }
           >
@@ -143,7 +143,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 <button
                   disabled={busy}
                   onClick={() =>
-                    void act(() => window.docufill.runs.generatePrompt(runId), 'Prompt generated.')
+                    void act(() => window.fillforge.runs.generatePrompt(runId), 'Prompt generated.')
                   }
                 >
                   Generate prompt
@@ -159,7 +159,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                   </button>
                   <button
                     className="link"
-                    onClick={() => void act(() => window.docufill.runs.generatePrompt(runId))}
+                    onClick={() => void act(() => window.fillforge.runs.generatePrompt(runId))}
                   >
                     regenerate
                   </button>
@@ -192,7 +192,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
             disabled={busy || rawPaste.trim() === ''}
             onClick={async () => {
               await act(async () => {
-                const imported = await window.docufill.runs.importExtraction(runId, rawPaste);
+                const imported = await window.fillforge.runs.importExtraction(runId, rawPaste);
                 setIssues(imported.issues);
               }, 'Extraction imported. Review the values below.');
               setRawPaste('');
@@ -271,7 +271,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               className="primary"
               disabled={busy}
               onClick={() =>
-                void act(() => window.docufill.runs.saveReview(runId, finalValues), 'Review saved.')
+                void act(() => window.fillforge.runs.saveReview(runId, finalValues), 'Review saved.')
               }
             >
               Save review
@@ -279,7 +279,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
             <button
               disabled={busy}
               onClick={() =>
-                void act(() => window.docufill.runs.normalize(runId), 'Normalized values written.')
+                void act(() => window.fillforge.runs.normalize(runId), 'Normalized values written.')
               }
             >
               Normalize
@@ -288,8 +288,8 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               disabled={busy}
               onClick={() =>
                 void act(async () => {
-                  await window.docufill.runs.normalize(runId);
-                  await window.docufill.runs.render(runId);
+                  await window.fillforge.runs.normalize(runId);
+                  await window.fillforge.runs.render(runId);
                 }, 'Document rendered.')
               }
             >
@@ -313,14 +313,14 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 <span className="actions-cell">
                   <button
                     className="link"
-                    onClick={() => void act(() => window.docufill.system.openPath(output.path))}
+                    onClick={() => void act(() => window.fillforge.system.openPath(output.path))}
                   >
                     Open
                   </button>
                   <button
                     className="link"
                     onClick={() =>
-                      void act(() => window.docufill.system.showItemInFolder(output.path))
+                      void act(() => window.fillforge.system.showItemInFolder(output.path))
                     }
                   >
                     Show in folder
@@ -329,7 +329,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                     className="link"
                     onClick={() =>
                       void act(
-                        () => window.docufill.system.exportCopy(output.path),
+                        () => window.fillforge.system.exportCopy(output.path),
                         'Copy exported.'
                       )
                     }

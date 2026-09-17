@@ -1,4 +1,4 @@
-import type { TemplateBinding } from '@docufill/schema';
+import type { TemplateBinding } from '@fillforge/schema';
 
 export type BindingTransform = (value: unknown) => unknown;
 

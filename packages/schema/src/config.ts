@@ -34,6 +34,6 @@ export function resolveAppConfig(config: AppConfig): ResolvedAppConfig {
   return {
     theme: config.ui?.theme ?? 'system',
     showAdvancedFields: config.editor?.show_advanced_fields ?? false,
-    promptVersion: config.extraction?.prompt_version ?? 'docufill-extraction-v1'
+    promptVersion: config.extraction?.prompt_version ?? 'fillforge-extraction-v1'
   };
 }

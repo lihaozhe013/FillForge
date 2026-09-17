@@ -1,10 +1,10 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { ValidationError } from '@docufill/core';
-import { createDocxtemplaterRenderer } from '@docufill/docx';
-import type { ExtractionResult, ReviewedRecord } from '@docufill/schema';
-import { TemplateService } from '@docufill/templates';
+import { ValidationError } from '@fillforge/core';
+import { createDocxtemplaterRenderer } from '@fillforge/docx';
+import type { ExtractionResult, ReviewedRecord } from '@fillforge/schema';
+import { TemplateService } from '@fillforge/templates';
 import PizZip from 'pizzip';
 import { describe, expect, it } from 'vitest';
 import { FileRunRepository } from './repository.ts';
@@ -14,8 +14,8 @@ import { RunService } from './service.ts';
 const FIXTURES = path.resolve(import.meta.dirname, '../../../tests/fixtures');
 
 async function createServices() {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-runs-'));
-  const dataDir = path.join(home, '.local', 'docufill');
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-runs-'));
+  const dataDir = path.join(home, '.local', 'fillforge');
   const renderer = createDocxtemplaterRenderer();
   const templateService = TemplateService.createDefault(path.join(dataDir, 'templates'), renderer);
   const runRepository = new FileRunRepository(path.join(dataDir, 'runs'));
@@ -72,7 +72,7 @@ describe('RunService end to end', () => {
     const { runService, runRepository, templateService } = await createServices();
     await setupInvoiceTemplate(templateService);
 
-    const attachmentDir = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-src-'));
+    const attachmentDir = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-src-'));
     const attachmentSource = path.join(attachmentDir, 'invoice.jpg');
     await fs.writeFile(attachmentSource, 'fake-image-bytes');
 
@@ -177,7 +177,7 @@ describe('RunService end to end', () => {
   it('keeps attachments with the run and records their metadata', async () => {
     const { runService, runRepository, templateService } = await createServices();
     await setupInvoiceTemplate(templateService);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-attach-'));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-attach-'));
     const source = path.join(dir, 'invoice.jpg');
     await fs.writeFile(source, 'image');
     const secondSource = path.join(dir, 'invoice.jpg');

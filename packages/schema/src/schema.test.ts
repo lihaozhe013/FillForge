@@ -159,7 +159,7 @@ describe('runMetadataSchema', () => {
       created_at: '2026-09-16T12:30:00.000Z',
       template_id: 'invoice-cn',
       template_schema_version: 1,
-      prompt_version: 'docufill-extraction-v1',
+      prompt_version: 'fillforge-extraction-v1',
       attachments: [
         {
           filename: 'invoice.jpg',
@@ -178,7 +178,7 @@ describe('runMetadataSchema', () => {
       created_at: '2026-09-16T12:30:00.000Z',
       template_id: 'invoice-cn',
       template_schema_version: 1,
-      prompt_version: 'docufill-extraction-v1'
+      prompt_version: 'fillforge-extraction-v1'
     });
     expect(parsed.attachments).toEqual([]);
   });
@@ -190,7 +190,7 @@ describe('runMetadataSchema', () => {
       created_at: 'yesterday',
       template_id: 'invoice-cn',
       template_schema_version: 1,
-      prompt_version: 'docufill-extraction-v1'
+      prompt_version: 'fillforge-extraction-v1'
     });
     expect(result.success).toBe(false);
   });
@@ -223,7 +223,7 @@ describe('appConfigSchema', () => {
     const resolved = resolveAppConfig(parsed);
     expect(resolved.theme).toBe('system');
     expect(resolved.showAdvancedFields).toBe(false);
-    expect(resolved.promptVersion).toBe('docufill-extraction-v1');
+    expect(resolved.promptVersion).toBe('fillforge-extraction-v1');
   });
 
   it('rejects unknown themes', () => {

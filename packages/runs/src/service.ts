@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { ValidationError } from '@docufill/core';
-import type { DocumentRenderer } from '@docufill/docx';
+import { ValidationError } from '@fillforge/core';
+import type { DocumentRenderer } from '@fillforge/docx';
 import {
   buildExtractionPrompt,
   type ExtractionIssue,
@@ -8,7 +8,7 @@ import {
   parseExtractionResult,
   validateExtractionResult,
   valueFailsFieldValidation
-} from '@docufill/extraction';
+} from '@fillforge/extraction';
 import {
   type AttachmentMetadata,
   type ExtractionResult,
@@ -17,8 +17,8 @@ import {
   type RunMetadata,
   type RunSummary,
   type TemplateSchema
-} from '@docufill/schema';
-import { resolveBindings, type TemplateService } from '@docufill/templates';
+} from '@fillforge/schema';
+import { resolveBindings, type TemplateService } from '@fillforge/templates';
 import type { RenderedArtifact, RunAttachmentInput, RunRepository } from './repository.ts';
 import { buildReviewRecord, getEffectiveValues } from './review.ts';
 

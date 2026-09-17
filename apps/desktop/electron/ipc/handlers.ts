@@ -1,7 +1,7 @@
 import path from 'node:path';
-import { copyFile, pathExists, toAppErrorDto, ValidationError } from '@docufill/core';
-import { buildExtractionPrompt } from '@docufill/extraction';
-import { mediaTypeForFilename } from '@docufill/runs';
+import { copyFile, pathExists, toAppErrorDto, ValidationError } from '@fillforge/core';
+import { buildExtractionPrompt } from '@fillforge/extraction';
+import { mediaTypeForFilename } from '@fillforge/runs';
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { z } from 'zod';
 import type { AppErrorDtoLike, IpcResult } from '../../src/lib/ipc-protocol';
@@ -177,7 +177,7 @@ export function registerIpcHandlers(services: AppServices): void {
   handle(IPC.systemOpenPath, systemPathSchema, async ({ path: target }) => {
     await requireExistingFile(target);
     if (!isInside(paths.dataDir, target)) {
-      throw new ValidationError('Only files inside the Docufill data directory can be opened.', {
+      throw new ValidationError('Only files inside the FillForge data directory can be opened.', {
         path: target
       });
     }
@@ -186,7 +186,7 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.systemShowItemInFolder, systemPathSchema, async ({ path: target }) => {
     if (!isInside(paths.dataDir, target)) {
-      throw new ValidationError('Only files inside the Docufill data directory can be revealed.', {
+      throw new ValidationError('Only files inside the FillForge data directory can be revealed.', {
         path: target
       });
     }
@@ -197,7 +197,7 @@ export function registerIpcHandlers(services: AppServices): void {
   handle(IPC.systemExportCopy, systemPathSchema, async ({ path: source }) => {
     await requireExistingFile(source);
     if (!isInside(paths.dataDir, source)) {
-      throw new ValidationError('Only files inside the Docufill data directory can be exported.', {
+      throw new ValidationError('Only files inside the FillForge data directory can be exported.', {
         path: source
       });
     }

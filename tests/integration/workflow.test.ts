@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createContext } from '@docufill/tools';
+import { createContext } from '@fillforge/tools';
 import PizZip from 'pizzip';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -11,18 +11,18 @@ const INVOICE_CONFIG = path.join(FIXTURES, 'templates/invoice/template.yaml');
 const VALID_EXTRACTION = path.join(FIXTURES, 'extraction/invoice-valid.json');
 
 let home: string;
-const previousHome = process.env.DOCUFILL_HOME;
+const previousHome = process.env.FILLFORGE_HOME;
 
 beforeEach(async () => {
-  home = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-integration-'));
-  process.env.DOCUFILL_HOME = home;
+  home = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-integration-'));
+  process.env.FILLFORGE_HOME = home;
 });
 
 afterEach(() => {
   if (previousHome === undefined) {
-    delete process.env.DOCUFILL_HOME;
+    delete process.env.FILLFORGE_HOME;
   } else {
-    process.env.DOCUFILL_HOME = previousHome;
+    process.env.FILLFORGE_HOME = previousHome;
   }
 });
 
@@ -59,7 +59,7 @@ describe('MVP workflow (fixture driven)', () => {
     // 3-5. Apply the semantic field configuration and persist template.yaml.
     await fs.copyFile(
       INVOICE_CONFIG,
-      path.join(home, '.local/docufill/templates/invoice-cn/template.yaml')
+      path.join(home, '.local/fillforge/templates/invoice-cn/template.yaml')
     );
     const configured = await firstSession.templateService.loadTemplate('invoice-cn');
     expect(Object.keys(configured.fields)).toEqual([
@@ -69,7 +69,7 @@ describe('MVP workflow (fixture driven)', () => {
       'total_amount'
     ]);
     const yamlOnDisk = await fs.readFile(
-      path.join(home, '.local/docufill/templates/invoice-cn/template.yaml'),
+      path.join(home, '.local/fillforge/templates/invoice-cn/template.yaml'),
       'utf8'
     );
     expect(yamlOnDisk).toContain('label: 发票号码');
@@ -94,7 +94,7 @@ describe('MVP workflow (fixture driven)', () => {
 
     // 9-10. The prompt file is stored in the run directory.
     const promptFile = await fs.readFile(
-      path.join(home, '.local/docufill/runs', run.id, 'prompt.md'),
+      path.join(home, '.local/fillforge/runs', run.id, 'prompt.md'),
       'utf8'
     );
     expect(promptFile).toContain('Expected JSON structure');
@@ -115,7 +115,7 @@ describe('MVP workflow (fixture driven)', () => {
       decision: 'corrected'
     });
     const extractionOnDisk = JSON.parse(
-      await fs.readFile(path.join(home, '.local/docufill/runs', run.id, 'extraction.json'), 'utf8')
+      await fs.readFile(path.join(home, '.local/fillforge/runs', run.id, 'extraction.json'), 'utf8')
     ) as { seller_name: { value: string } };
     expect(extractionOnDisk.seller_name.value).toBe('示例科技有限公司');
 
@@ -136,7 +136,7 @@ describe('MVP workflow (fixture driven)', () => {
     });
     await fs.copyFile(
       INVOICE_CONFIG,
-      path.join(home, '.local/docufill/templates/invoice-cn/template.yaml')
+      path.join(home, '.local/fillforge/templates/invoice-cn/template.yaml')
     );
     const run = await firstSession.runService.createRun({ templateId: 'invoice-cn' });
     const raw = await fs.readFile(VALID_EXTRACTION, 'utf8');
@@ -161,7 +161,7 @@ describe('MVP workflow (fixture driven)', () => {
 
     // The run directory is inspectable with a plain file listing.
     // prompt.md is absent because this run never generated a prompt.
-    const entries = await fs.readdir(path.join(home, '.local/docufill/runs', run.id));
+    const entries = await fs.readdir(path.join(home, '.local/fillforge/runs', run.id));
     expect(entries.sort()).toEqual([
       'extraction.json',
       'input',

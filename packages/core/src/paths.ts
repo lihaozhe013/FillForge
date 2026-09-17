@@ -14,7 +14,7 @@ export interface AppPaths {
   logsDir: string;
 }
 
-export const APP_NAME = 'docufill';
+export const APP_NAME = 'fillforge';
 
 /**
  * Resolve canonical application paths under a given home directory.
@@ -38,7 +38,7 @@ export function resolveAppPaths(home: string): AppPaths {
 }
 
 export function getHomeDirectory(): string {
-  return process.env.DOCUFILL_HOME ?? os.homedir();
+  return process.env.FILLFORGE_HOME ?? os.homedir();
 }
 
 export function getAppPaths(): AppPaths {

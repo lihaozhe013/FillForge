@@ -1,7 +1,7 @@
-import type { DocufillApi } from './ipc-protocol';
+import type { FillForgeApi } from './ipc-protocol';
 
 declare global {
   interface Window {
-    docufill: DocufillApi;
+    fillforge: FillForgeApi;
   }
 }

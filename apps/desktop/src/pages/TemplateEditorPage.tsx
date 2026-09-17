@@ -1,4 +1,4 @@
-import type { FieldDefinition, PlaceholderReport, TemplateSchema } from '@docufill/schema';
+import type { FieldDefinition, PlaceholderReport, TemplateSchema } from '@fillforge/schema';
 import { useEffect, useMemo, useState } from 'react';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
@@ -24,13 +24,13 @@ export function TemplateEditorPage({
   templateId: string;
   navigate: Navigate;
 }) {
-  const loaded = useAsyncData(() => window.docufill.templates.load(templateId), [templateId]);
+  const loaded = useAsyncData(() => window.fillforge.templates.load(templateId), [templateId]);
   const inspection = useAsyncData(
-    () => window.docufill.templates.inspect(templateId),
+    () => window.fillforge.templates.inspect(templateId),
     [templateId]
   );
   const preview = useAsyncData(
-    () => window.docufill.templates.promptPreview(templateId),
+    () => window.fillforge.templates.promptPreview(templateId),
     [templateId]
   );
 
@@ -89,7 +89,7 @@ export function TemplateEditorPage({
     setBusy(true);
     setError(null);
     try {
-      await window.docufill.templates.saveSchema(draft.id, draft);
+      await window.fillforge.templates.saveSchema(draft.id, draft);
       setSaved(true);
       inspection.reload();
       preview.reload();

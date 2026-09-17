@@ -1,5 +1,5 @@
 {
-  "name": "docufill",
+  "name": "fillforge",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "node": ">=26"
   },
   "scripts": {
-    "dev": "pnpm --filter @docufill/desktop dev",
+    "dev": "pnpm --filter @fillforge/desktop dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && tsc --noEmit -p tsconfig.json",
     "lint": "biome check .",
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
-    "@docufill/tools": "workspace:*",
+    "@fillforge/tools": "workspace:*",
     "@types/node": "^22.20.3",
     "pizzip": "^3.2.0",
     "tsx": "^4.23.13",

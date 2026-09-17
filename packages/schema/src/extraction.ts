@@ -18,4 +18,4 @@ export const extractionResultSchema = z.record(z.string(), extractedFieldSchema)
 
 export type ExtractionResult = z.output<typeof extractionResultSchema>;
 
-export const PROMPT_VERSION = 'docufill-extraction-v1';
+export const PROMPT_VERSION = 'fillforge-extraction-v1';

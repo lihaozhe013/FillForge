@@ -1,11 +1,11 @@
-# Docufill
+# FillForge
 
 Local-first desktop application for configuring, filling, reviewing, and rendering Microsoft Word
 `.docx` templates.
 
 ## What the project does
 
-Docufill sits between AI extraction and deterministic document rendering:
+FillForge sits between AI extraction and deterministic document rendering:
 
 ```text
 DOCX template
@@ -14,7 +14,7 @@ configure semantic field definitions
     ↓ generate an AI extraction prompt
 user gives the prompt + source documents/images to an AI
     ↓ AI returns structured JSON
-user pastes the JSON into Docufill
+user pastes the JSON into FillForge
     ↓ validate + review + correct
 deterministically render DOCX
 ```
@@ -31,7 +31,7 @@ MVP vertical slice implemented and tested:
 - Electron 44 desktop app (React + Vite renderer, sandboxed preload, typed IPC)
 - DOCX import, placeholder discovery (safe across XML run boundaries)
 - Semantic field configuration persisted as human-readable `template.yaml`
-- Deterministic extraction-prompt generation (`docufill-extraction-v1`)
+- Deterministic extraction-prompt generation (`fillforge-extraction-v1`)
 - AI result import with Markdown-fence tolerance and Zod validation
 - Review step that preserves the original model output separately from human-corrected values
 - Binding transforms (date parts, case, trim, Chinese currency uppercase)
@@ -69,10 +69,10 @@ pnpm tsx packages/tools/src/index.ts validate-fields <templateId> <extraction.js
 pnpm tsx packages/tools/src/index.ts render-document <runId>
 ```
 
-Set `DOCFILL_HOME` to redirect the entire data root (used by tests):
+Set `FILLFORGE_HOME` to redirect the entire data root (used by tests):
 
 ```bash
-DOCFILL_HOME=/tmp/docufill-test pnpm test
+FILLFORGE_HOME=/tmp/fillforge-test pnpm test
 ```
 
 ## Filesystem layout
@@ -81,14 +81,14 @@ There is **no SQL database** — the filesystem is the only source of truth, and
 ordinary inspectable file.
 
 ```text
-~/.config/docufill/config.yaml      # application configuration
+~/.config/fillforge/config.yaml      # application configuration
 
-~/.local/docufill/templates/<id>/   # one directory per template
+~/.local/fillforge/templates/<id>/   # one directory per template
 ├── template.docx                   # copied on import, never modified
 ├── template.yaml                   # field definitions + bindings
 └── README.md                       # optional human notes
 
-~/.local/docufill/runs/<ulid>/      # one self-contained directory per run
+~/.local/fillforge/runs/<ulid>/      # one self-contained directory per run
 ├── metadata.json                   # schema-versioned run metadata
 ├── input/                          # source evidence (images/PDFs), untouched
 ├── prompt.md                       # generated extraction prompt (immutable)
@@ -100,13 +100,13 @@ ordinary inspectable file.
     ├── result-002.docx
     └── result.docx                 # always mirrors the newest render
 
-~/.local/docufill/exports/          # default export target
-~/.local/docufill/cache/            # disposable caches only, never canonical
-~/.local/docufill/logs/             # release-build logs
+~/.local/fillforge/exports/          # default export target
+~/.local/fillforge/cache/            # disposable caches only, never canonical
+~/.local/fillforge/logs/             # release-build logs
 ```
 
 The same logical paths are used on Linux, macOS, and Windows — no OS-specific AppData/Application
-Support indirection. `DOCFILL_HOME` overrides the home directory for tests and portable use.
+Support indirection. `FILLFORGE_HOME` overrides the home directory for tests and portable use.
 
 ## MVP workflow
 

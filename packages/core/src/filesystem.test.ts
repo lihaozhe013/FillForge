@@ -15,7 +15,7 @@ import {
 } from './filesystem.ts';
 
 async function tempDir(prefix: string): Promise<string> {
-  return fs.mkdtemp(path.join(os.tmpdir(), `docufill-${prefix}-`));
+  return fs.mkdtemp(path.join(os.tmpdir(), `fillforge-${prefix}-`));
 }
 
 describe('filesystem helpers', () => {

@@ -11,8 +11,8 @@ const VALID_EXTRACTION = path.join(FIXTURES, 'extraction/invoice-valid.json');
 let home: string;
 
 beforeEach(async () => {
-  home = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-tools-'));
-  process.env.DOCUFILL_HOME = home;
+  home = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-tools-'));
+  process.env.FILLFORGE_HOME = home;
 });
 
 async function prepareTemplate(): Promise<void> {
@@ -26,7 +26,7 @@ async function prepareTemplate(): Promise<void> {
   // Use the fixture configuration file as-is.
   await fs.copyFile(
     INVOICE_CONFIG,
-    path.join(home, '.local/docufill/templates/invoice-cn/template.yaml')
+    path.join(home, '.local/fillforge/templates/invoice-cn/template.yaml')
   );
   await context.runService.createRun({ templateId: 'invoice-cn' });
 }
@@ -81,14 +81,14 @@ describe('CLI commands', () => {
 
     const output = await renderDocument(context, run.id);
     expect(output).toContain('result-001.docx');
-    expect(output).toContain(path.join(home, '.local/docufill/runs'));
+    expect(output).toContain(path.join(home, '.local/fillforge/runs'));
   });
 });
 
 describe('main dispatch', () => {
   it('prints help', async () => {
     const { main } = await import('./index.ts');
-    expect(await main([])).toContain('Docufill CLI');
+    expect(await main([])).toContain('FillForge CLI');
   });
 
   it('rejects unknown commands', async () => {

@@ -3,7 +3,7 @@ import type {
   FieldDefinition,
   FieldDefinitions,
   TemplateSchema
-} from '@docufill/schema';
+} from '@fillforge/schema';
 import { describe, expect, it } from 'vitest';
 import { formatDate, normalizeExtractionResult, normalizeFieldValue } from './normalizer.ts';
 import { validateExtractionResult } from './validator.ts';

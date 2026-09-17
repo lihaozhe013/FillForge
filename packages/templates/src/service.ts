@@ -1,5 +1,5 @@
-import { readFileBinary } from '@docufill/core';
-import type { DocumentRenderer } from '@docufill/docx';
+import { readFileBinary } from '@fillforge/core';
+import type { DocumentRenderer } from '@fillforge/docx';
 import type {
   CreateTemplateInput,
   FieldDefinition,
@@ -7,7 +7,7 @@ import type {
   TemplateBinding,
   TemplateSchema,
   TemplateSummary
-} from '@docufill/schema';
+} from '@fillforge/schema';
 import { computePlaceholderReport } from './inspect.ts';
 import { FileTemplateRepository, type TemplateRepository } from './repository.ts';
 

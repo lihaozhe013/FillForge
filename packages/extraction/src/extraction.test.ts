@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { ValidationError } from '@docufill/core';
-import type { TemplateSchema } from '@docufill/schema';
+import { ValidationError } from '@fillforge/core';
+import type { TemplateSchema } from '@fillforge/schema';
 import { describe, expect, it } from 'vitest';
 import { ExtractionParseError } from './errors.ts';
 import { buildExpectedJson, buildExtractionPrompt } from './prompt-builder.ts';
@@ -45,7 +45,7 @@ describe('buildExtractionPrompt', () => {
     const second = buildExtractionPrompt(invoiceTemplate);
     expect(first.prompt).toBe(second.prompt);
     expect(first.expectedJson).toBe(second.expectedJson);
-    expect(first.promptVersion).toBe('docufill-extraction-v1');
+    expect(first.promptVersion).toBe('fillforge-extraction-v1');
   });
 
   it('matches the golden prompt for the invoice fixture', () => {

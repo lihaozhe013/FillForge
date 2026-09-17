@@ -1,10 +1,10 @@
-import type { RunSummary } from '@docufill/schema';
+import type { RunSummary } from '@fillforge/schema';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section, StatusBadge } from '../components/ui';
 import { useAsyncData } from '../hooks/useAsyncData';
 
 export function RunsPage({ navigate }: { navigate: Navigate }) {
-  const runs = useAsyncData(() => window.docufill.runs.list(), []);
+  const runs = useAsyncData(() => window.fillforge.runs.list(), []);
 
   return (
     <div className="page">

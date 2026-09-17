@@ -1,5 +1,5 @@
-import { ValidationError } from '@docufill/core';
-import { type ExtractionResult, extractionResultSchema } from '@docufill/schema';
+import { ValidationError } from '@fillforge/core';
+import { type ExtractionResult, extractionResultSchema } from '@fillforge/schema';
 import { ExtractionParseError } from './errors.ts';
 
 /**

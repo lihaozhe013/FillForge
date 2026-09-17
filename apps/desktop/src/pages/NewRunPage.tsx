@@ -1,4 +1,4 @@
-import type { TemplateSummary } from '@docufill/schema';
+import type { TemplateSummary } from '@fillforge/schema';
 import { useState } from 'react';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
@@ -11,7 +11,7 @@ export function NewRunPage({
   initialTemplateId?: string;
   navigate: Navigate;
 }) {
-  const templates = useAsyncData(() => window.docufill.templates.list(), []);
+  const templates = useAsyncData(() => window.fillforge.templates.list(), []);
   const [selected, setSelected] = useState(initialTemplateId ?? '');
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export function NewRunPage({
     setBusy(true);
     setError(null);
     try {
-      const run = await window.docufill.runs.create({
+      const run = await window.fillforge.runs.create({
         templateId: selected,
         attachmentPaths: []
       });
@@ -74,7 +74,7 @@ export function NewRunPage({
 
       <Section title="2. Create the run">
         <p className="muted">
-          A run is a self-contained directory under <code>~/.local/docufill/runs/&lt;id&gt;/</code>.
+          A run is a self-contained directory under <code>~/.local/fillforge/runs/&lt;id&gt;/</code>.
           You can attach source images or PDFs to it afterwards; they are copied into the run and
           never modified.
         </p>

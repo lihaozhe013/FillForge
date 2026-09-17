@@ -1,4 +1,4 @@
-import { templateIdSchema, templateSchema } from '@docufill/schema';
+import { templateIdSchema, templateSchema } from '@fillforge/schema';
 import { z } from 'zod';
 
 export const emptyPayloadSchema = z.void();

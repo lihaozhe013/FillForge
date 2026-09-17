@@ -1,5 +1,5 @@
 {
-  "name": "@docufill/docx",
+  "name": "@fillforge/docx",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "test": "vitest run --root ../.."
   },
   "dependencies": {
-    "@docufill/core": "workspace:*",
+    "@fillforge/core": "workspace:*",
     "docxtemplater": "^3.70.0",
     "pizzip": "^3.2.0"
   },

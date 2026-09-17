@@ -1,7 +1,7 @@
-import { ensureAppDirectories, getAppPaths } from '@docufill/core';
-import { createDocxtemplaterRenderer, type DocumentRenderer } from '@docufill/docx';
-import { FileRunRepository, RunService } from '@docufill/runs';
-import { TemplateService } from '@docufill/templates';
+import { ensureAppDirectories, getAppPaths } from '@fillforge/core';
+import { createDocxtemplaterRenderer, type DocumentRenderer } from '@fillforge/docx';
+import { FileRunRepository, RunService } from '@fillforge/runs';
+import { TemplateService } from '@fillforge/templates';
 
 export interface AppContext {
   templateService: TemplateService;
@@ -11,7 +11,7 @@ export interface AppContext {
 
 /**
  * Assemble application services the same way the desktop app does. The
- * DOCUFILL_HOME environment variable overrides the home directory, so CLI
+ * FILLFORGE_HOME environment variable overrides the home directory, so CLI
  * commands and tests can operate on an isolated data root.
  */
 export async function createContext(): Promise<AppContext> {

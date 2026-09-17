@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { ensureDirectory } from '@docufill/core';
+import { ensureDirectory } from '@fillforge/core';
 
 const MAX_LOG_SIZE = 2 * 1024 * 1024;
 

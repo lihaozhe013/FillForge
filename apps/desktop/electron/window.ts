@@ -7,7 +7,7 @@ export function createMainWindow(): BrowserWindow {
     height: 780,
     minWidth: 940,
     minHeight: 620,
-    title: 'Docufill',
+    title: 'FillForge',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.cjs'),

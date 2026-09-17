@@ -226,31 +226,31 @@ Resolve `~` using the current user's home directory.
 Configuration:
 
 ```text
-~/.config/docufill/
+~/.config/fillforge/
 ```
 
 User data:
 
 ```text
-~/.local/docufill/
+~/.local/fillforge/
 ```
 
 Canonical paths:
 
 ```text
-~/.config/docufill/config.yaml
+~/.config/fillforge/config.yaml
 
-~/.local/docufill/templates/
-~/.local/docufill/runs/
-~/.local/docufill/exports/
-~/.local/docufill/cache/
+~/.local/fillforge/templates/
+~/.local/fillforge/runs/
+~/.local/fillforge/exports/
+~/.local/fillforge/cache/
 ```
 
 Even on Windows, use:
 
 ```text
-<HOME>/.config/docufill
-<HOME>/.local/docufill
+<HOME>/.config/fillforge
+<HOME>/.local/fillforge
 ```
 
 Do not silently translate these into Windows AppData directories.
@@ -291,7 +291,7 @@ Tests MUST be able to override the home/data root without touching the real user
 For example:
 
 ```text
-DOCUFILL_HOME=/tmp/docufill-test
+FILLFORGE_HOME=/tmp/fillforge-test
 ```
 
 or an equivalent dependency-injected path provider.
@@ -351,12 +351,12 @@ Renderer UI should call typed application operations.
 Example:
 
 ```ts
-window.docufill.templates.list();
-window.docufill.templates.import();
-window.docufill.templates.updateSchema();
-window.docufill.runs.create();
-window.docufill.runs.importExtraction();
-window.docufill.runs.render();
+window.fillforge.templates.list();
+window.fillforge.templates.import();
+window.fillforge.templates.updateSchema();
+window.fillforge.runs.create();
+window.fillforge.runs.importExtraction();
+window.fillforge.runs.render();
 ```
 
 IPC payloads must be validated with Zod at process boundaries.
@@ -372,7 +372,7 @@ Use a pnpm workspace.
 Preferred structure:
 
 ```text
-docufill/
+fillforge/
 ├── AGENTS.md
 ├── README.md
 ├── package.json
@@ -601,7 +601,7 @@ Each template is a directory.
 Example:
 
 ```text
-~/.local/docufill/templates/invoice-cn/
+~/.local/fillforge/templates/invoice-cn/
 ├── template.docx
 ├── template.yaml
 └── README.md
@@ -941,7 +941,7 @@ Record a `prompt_version`.
 Example:
 
 ```text
-docufill-extraction-v1
+fillforge-extraction-v1
 ```
 
 Do not make generated prompts dependent on UI code.
@@ -1112,7 +1112,7 @@ Each execution is stored as a self-contained directory.
 Example:
 
 ```text
-~/.local/docufill/runs/01K5A.../
+~/.local/fillforge/runs/01K5A.../
 ├── metadata.json
 ├── input/
 │   ├── invoice.jpg
@@ -1136,7 +1136,7 @@ Example `metadata.json`:
   "created_at": "2026-09-16T12:30:00.000Z",
   "template_id": "invoice-cn",
   "template_schema_version": 1,
-  "prompt_version": "docufill-extraction-v1"
+  "prompt_version": "fillforge-extraction-v1"
 }
 ```
 
@@ -1231,7 +1231,7 @@ Do not implement application state through repeated mutation of one giant JSON f
 Bad:
 
 ```text
-~/.local/docufill/state.json
+~/.local/fillforge/state.json
 ```
 
 containing every template and run.
@@ -1488,7 +1488,7 @@ Do not add an observability platform.
 Logs may be written to:
 
 ```text
-~/.local/docufill/logs/
+~/.local/fillforge/logs/
 ```
 
 or emitted to stdout during development.
@@ -1513,7 +1513,7 @@ Log IDs and operation metadata instead.
 Application configuration lives in:
 
 ```text
-~/.config/docufill/config.yaml
+~/.config/fillforge/config.yaml
 ```
 
 Example:
@@ -1528,7 +1528,7 @@ editor:
   show_advanced_fields: false
 
 extraction:
-  prompt_version: docufill-extraction-v1
+  prompt_version: fillforge-extraction-v1
 ```
 
 Future AI provider configuration may look like:
@@ -1649,7 +1649,7 @@ Export copy
 The first usable milestone MUST support:
 
 1. Start Electron desktop app.
-2. Initialize `~/.config/docufill` and `~/.local/docufill`.
+2. Initialize `~/.config/fillforge` and `~/.local/fillforge`.
 3. Import a DOCX template.
 4. Detect placeholders.
 5. Create/edit semantic field configuration.
@@ -1929,7 +1929,7 @@ runs:render
 Prefer a preload API such as:
 
 ```ts
-interface DocufillApi {
+interface FillForgeApi {
   templates: {
     list(): Promise<TemplateSummary[]>;
     import(): Promise<TemplateSummary | null>;
@@ -1969,7 +1969,7 @@ The main process controls file access.
 When importing a template, COPY the original DOCX into:
 
 ```text
-~/.local/docufill/templates/<id>/template.docx
+~/.local/fillforge/templates/<id>/template.docx
 ```
 
 The application should not depend on the original source file continuing to exist.
@@ -2093,8 +2093,8 @@ Run against a temporary fake home.
 Never touch the developer's real:
 
 ```text
-~/.config/docufill
-~/.local/docufill
+~/.config/fillforge
+~/.local/fillforge
 ```
 
 during tests.
@@ -2353,10 +2353,10 @@ Explicitly document:
 
 ```text
 Configuration:
-~/.config/docufill
+~/.config/fillforge
 
 Application data:
-~/.local/docufill
+~/.local/fillforge
 ```
 
 Explicitly document that no SQL database is used.
@@ -2543,7 +2543,7 @@ total_amount
 10. User opens an external multimodal AI.
 11. User sends prompt + `invoice.jpg`.
 12. AI returns JSON.
-13. User pastes JSON into Docufill.
+13. User pastes JSON into FillForge.
 14. Application validates it.
 15. Application displays extracted values and evidence.
 16. User corrects one field.
@@ -2569,9 +2569,9 @@ Never violate them casually.
 
 2. No SQL database.
 
-3. ~/.config/docufill stores configuration.
+3. ~/.config/fillforge stores configuration.
 
-4. ~/.local/docufill stores user data.
+4. ~/.local/fillforge stores user data.
 
 5. AI produces structured data, not Word files.
 
@@ -2666,7 +2666,7 @@ Proceed as follows:
 3. Configure TypeScript 7.
 4. Configure Biome.
 5. Configure tests.
-6. Implement ~/.config/docufill and ~/.local/docufill path resolution.
+6. Implement ~/.config/fillforge and ~/.local/fillforge path resolution.
 7. Implement filesystem directory initialization.
 8. Define initial Zod domain schemas.
 9. Add Docxtemplater + PizZip.

@@ -1,5 +1,5 @@
-import type { TemplateInspection } from '@docufill/docx';
-import type { PlaceholderReport, TemplateSchema } from '@docufill/schema';
+import type { TemplateInspection } from '@fillforge/docx';
+import type { PlaceholderReport, TemplateSchema } from '@fillforge/schema';
 
 /**
  * Compare discovered DOCX placeholders with the template configuration.

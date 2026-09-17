@@ -3,7 +3,7 @@ import type {
   ReviewDecision,
   ReviewedField,
   ReviewedRecord
-} from '@docufill/schema';
+} from '@fillforge/schema';
 
 /**
  * Decide the review decision from the model value and the human value.

@@ -1,4 +1,4 @@
-import type { ExtractionResult, FieldDefinition, TemplateSchema } from '@docufill/schema';
+import type { ExtractionResult, FieldDefinition, TemplateSchema } from '@fillforge/schema';
 
 export interface ExtractionIssue {
   field: string;

@@ -1,4 +1,4 @@
-import type { ExtractionResult, FieldDefinition, FieldDefinitions } from '@docufill/schema';
+import type { ExtractionResult, FieldDefinition, FieldDefinitions } from '@fillforge/schema';
 
 function applyStringNormalization(value: string, field: FieldDefinition): string {
   let out = value;

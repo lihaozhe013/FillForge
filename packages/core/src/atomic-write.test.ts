@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { atomicWriteFile } from './atomic-write.ts';
 
 async function tempFile(name: string): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-atomic-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-atomic-'));
   return path.join(dir, name);
 }
 
@@ -41,7 +41,7 @@ describe('atomicWriteFile', () => {
   });
 
   it('removes the temp file when the rename fails', async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'docufill-atomic-'));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'fillforge-atomic-'));
     // A directory at the target path makes the final rename fail (EISDIR).
     await fs.mkdir(path.join(dir, 'occupied.txt'));
     await expect(atomicWriteFile(path.join(dir, 'occupied.txt'), 'x')).rejects.toThrow();

@@ -1,11 +1,11 @@
-import type { TemplateSummary } from '@docufill/schema';
+import type { TemplateSummary } from '@fillforge/schema';
 import { useState } from 'react';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
 import { extractError, useAsyncData } from '../hooks/useAsyncData';
 
 export function TemplatesPage({ navigate }: { navigate: Navigate }) {
-  const templates = useAsyncData(() => window.docufill.templates.list(), []);
+  const templates = useAsyncData(() => window.fillforge.templates.list(), []);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -30,7 +30,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
           <button
             className="primary"
             disabled={busy}
-            onClick={() => void run(() => window.docufill.templates.import())}
+            onClick={() => void run(() => window.fillforge.templates.import())}
           >
             Import DOCX
           </button>
@@ -75,7 +75,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
                   <button
                     className="link"
                     disabled={busy}
-                    onClick={() => void run(() => window.docufill.templates.duplicate(template.id))}
+                    onClick={() => void run(() => window.fillforge.templates.duplicate(template.id))}
                   >
                     Duplicate
                   </button>
@@ -88,7 +88,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
                           `Delete template "${template.id}"? This removes its directory.`
                         )
                       ) {
-                        void run(() => window.docufill.templates.delete(template.id));
+                        void run(() => window.fillforge.templates.delete(template.id));
                       }
                     }}
                   >

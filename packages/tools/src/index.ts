@@ -6,7 +6,7 @@ import { inspectTemplate } from './inspect-template.ts';
 import { renderDocument } from './render-document.ts';
 import { validateFields } from './validate-fields.ts';
 
-const HELP = `Docufill CLI
+const HELP = `FillForge CLI
 
 Usage: pnpm tsx packages/tools/src/index.ts <command> [args]
 
@@ -17,7 +17,7 @@ Commands:
   render-document <runId>                  Render a run's reviewed values to DOCX
 
 Environment:
-  DOCUFILL_HOME    Override the data home (default: the user's home directory)
+  FILLFORGE_HOME    Override the data home (default: the user's home directory)
 `;
 
 type Command = (context: AppContext, args: string[]) => Promise<string>;

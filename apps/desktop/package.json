@@ -1,8 +1,8 @@
 {
-  "name": "@docufill/desktop",
+  "name": "@fillforge/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Docufill desktop application (Electron)",
+  "description": "FillForge desktop application (Electron)",
   "main": "out/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -12,12 +12,12 @@
     "test": "vitest run --root ../.."
   },
   "dependencies": {
-    "@docufill/core": "workspace:*",
-    "@docufill/docx": "workspace:*",
-    "@docufill/extraction": "workspace:*",
-    "@docufill/runs": "workspace:*",
-    "@docufill/schema": "workspace:*",
-    "@docufill/templates": "workspace:*",
+    "@fillforge/core": "workspace:*",
+    "@fillforge/docx": "workspace:*",
+    "@fillforge/extraction": "workspace:*",
+    "@fillforge/runs": "workspace:*",
+    "@fillforge/schema": "workspace:*",
+    "@fillforge/templates": "workspace:*",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zod": "^4.6.5"
