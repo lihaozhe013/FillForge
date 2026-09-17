@@ -1,990 +1,486 @@
-# SPEC.md
+# FillForge Project Specification
 
-## 1. Project Overview
+| Property | Value                                                        |
+| -------- | ------------------------------------------------------------ |
+| Status   | Normative                                                    |
+| Version  | 1.0                                                          |
+| Scope    | MVP baseline                                                 |
+| Audience | Maintainers, contributors, reviewers, and automation authors |
 
-Build a local-first desktop application for configuring, filling, reviewing, and rendering Microsoft
-Word `.docx` templates.
+FillForge is a local-first desktop application for configuring DOCX templates, collecting structured
+values from external AI-assisted extraction, reviewing those values, and rendering deterministic
+Microsoft Word documents.
 
-The product is centered around this workflow:
+The MVP deliberately uses a manual model handoff: the application generates a prompt, the user runs
+that prompt with any suitable external AI tool, and the user imports the returned JSON. This
+document defines the product contract, technical boundaries, persisted formats, security rules, and
+acceptance criteria for that workflow.
 
-```text
-DOCX template
-    ↓
-discover placeholders
-    ↓
-configure semantic field definitions
-    ↓
-generate an AI extraction prompt/schema
-    ↓
-user gives the prompt + source documents/images to an AI
-    ↓
-AI returns structured JSON
-    ↓
-user pastes/imports JSON into this application
-    ↓
-validate + review + correct
-    ↓
-deterministically render DOCX
-```
+## 1. Normative language
 
-The first version MUST NOT require an integrated AI agent.
+The keywords below are normative:
 
-The first version MUST be useful even when the user manually copies the generated prompt into
-ChatGPT, Claude, Gemini, or another multimodal model and pastes the resulting JSON back into the
-app.
+- **MUST**: required for conformance.
+- **MUST NOT**: prohibited.
+- **SHOULD**: recommended unless a documented reason requires otherwise.
+- **MAY**: optional and compatible with this specification.
 
-The architecture MUST, however, make future integration with:
+This document is the normative specification. The README is an operational guide and MUST remain
+consistent with this document. Code and tests are the executable implementation of the requirements.
 
-- direct model APIs,
-- multimodal models,
-- MCP,
-- OpenAI Agents SDK,
-- Mastra,
-- other agent runtimes,
+## 2. Product scope
 
-straightforward without rewriting the domain model or document engine.
+### 2.1 MVP objective
 
-The key abstraction is:
+The MVP MUST support this complete local workflow:
 
-```text
-Unstructured Evidence
-        ↓
-Extraction Schema
-        ↓
-Structured Record
-        ↓
-Validation / Human Review
-        ↓
-Template Binding
-        ↓
-DOCX
-```
+1. Import a DOCX template.
+2. Discover its placeholders, including placeholders split across Word XML runs.
+3. Configure business fields, extraction instructions, normalization, validation, and bindings.
+4. Persist the template configuration as human-readable YAML.
+5. Create a run and copy optional source evidence into the run.
+6. Generate and persist a deterministic extraction prompt.
+7. Import raw JSON returned by an external AI tool, including an obvious Markdown JSON fence.
+8. Preserve the original extraction result.
+9. Review, correct, reject, or fill values manually.
+10. Normalize and validate the reviewed business record.
+11. Resolve template bindings and render a DOCX deterministically.
+12. Retain the run and all generated output as inspectable filesystem artifacts.
+13. Reopen templates and runs after restarting the application.
 
-Do NOT architect the application as:
+### 2.2 MVP requirement matrix
 
-```text
-image → AI → Word replacement
-```
+| ID        | Requirement                                                                   | Status      |
+| --------- | ----------------------------------------------------------------------------- | ----------- |
+| FF-MVP-01 | Electron desktop application with React, Vite, and typed preload IPC          | Implemented |
+| FF-MVP-02 | DOCX import and run-safe placeholder inspection                               | Implemented |
+| FF-MVP-03 | YAML-backed template and field configuration                                  | Implemented |
+| FF-MVP-04 | Deterministic prompt and expected JSON generation                             | Implemented |
+| FF-MVP-05 | Manual JSON extraction import with schema and semantic validation             | Implemented |
+| FF-MVP-06 | Immutable original extraction plus separate human review                      | Implemented |
+| FF-MVP-07 | Normalization, business validation, binding transforms, and DOCX rendering    | Implemented |
+| FF-MVP-08 | Versioned run artifacts and restart-safe history                              | Implemented |
+| FF-MVP-09 | Application settings for theme, editor options, and prompt version            | Implemented |
+| FF-MVP-10 | CLI access to inspection, prompt generation, validation, and rendering        | Implemented |
+| FF-MVP-11 | Direct model calls, agent runtime, MCP server, cloud sync, and authentication | Deferred    |
 
-The structured record between AI extraction and document rendering is a first-class domain object.
+A feature is not considered part of the MVP merely because an interface or future seam exists.
 
----
+## 3. User workflow contract
 
-# 2. Hard Technical Constraints
-
-These constraints are deliberate. Do not replace them without explicit instruction.
-
-## Runtime and tooling
-
-Use:
+The application MUST preserve the following separation:
 
 ```text
-Node.js 26.x
-pnpm
-TypeScript 7.x
-Electron 44.x
-React
-Vite
-Zod
-Docxtemplater
-PizZip
-YAML
+Source evidence
+      ↓
+Extraction prompt and schema
+      ↓
+Structured extraction result
+      ↓
+Human review and business validation
+      ↓
+Normalized business record
+      ↓
+Template bindings and transforms
+      ↓
+Rendered DOCX
 ```
 
-As of project creation:
-
-```text
-Node.js 26.x       development/tooling baseline
-TypeScript 7.x     compiler
-Electron 44.x      desktop runtime
-```
-
-Node 26 is the required external development runtime.
-
-Note that Electron embeds its own Node runtime. Electron 44 currently embeds Node 24.x. Application
-code that executes inside Electron main/preload processes MUST therefore avoid depending on Node
-26-only runtime APIs unless that code executes in an external Node process.
-
-Use Node 26 for:
-
-- pnpm scripts,
-- development tooling,
-- build scripts,
-- test runner where appropriate,
-- CLI utilities executed outside Electron.
-
-Electron main/preload code must remain compatible with Electron's bundled Node runtime.
-
-Use pnpm only.
-
-Do NOT introduce:
-
-- Bun,
-- Yarn,
-- npm lockfiles,
-- Deno.
-
-The repository must contain:
-
-```text
-pnpm-lock.yaml
-```
-
-and MUST NOT contain:
-
-```text
-package-lock.json
-yarn.lock
-bun.lock
-bun.lockb
-```
-
----
-
-# 3. No Database
-
-This is a hard architectural constraint.
-
-DO NOT add:
-
-```text
-SQLite
-PostgreSQL
-MySQL
-LevelDB
-IndexedDB as canonical storage
-PouchDB
-Dexie as canonical storage
-Prisma
-Drizzle
-TypeORM
-Sequelize
-```
-
-Do not introduce a database "for future scalability".
-
-Do not create an abstraction whose only purpose is to make adding SQL easier later.
-
-The filesystem is the source of truth.
-
-Persistent application data MUST be represented as ordinary inspectable files and directories.
-
-Preferred formats:
-
-```text
-YAML   → human-authored configuration
-JSON   → machine-generated records
-MD     → human-readable prompt/instructions when useful
-DOCX   → templates and generated documents
-images → source evidence
-PDF    → source evidence
-```
-
-The filesystem layout itself is part of the product design.
-
-Advantages we explicitly want:
-
-- transparent storage,
-- easy backup,
-- easy copying,
-- easy debugging,
-- Git-friendly template configuration,
-- easy synchronization,
-- no hidden DB state,
-- agent/CLI friendliness,
-- straightforward future MCP exposure.
-
-If indexing eventually becomes necessary, an index may be added later as a disposable cache.
-
-It MUST NOT become canonical storage.
-
-An index should always be rebuildable from the files.
-
----
-
-# 4. Cross-platform Filesystem Policy
-
-Do NOT use operating-system-specific application-data conventions.
-
-In particular, do NOT use:
-
-```text
-%APPDATA%
-%LOCALAPPDATA%
-AppData/Roaming
-AppData/Local
-~/Library/Application Support
-Electron app.getPath("userData")
-```
-
-as canonical storage.
-
-Use the same logical paths on Linux, macOS, and Windows.
-
-Resolve `~` using the current user's home directory.
-
-Configuration:
-
-```text
-~/.config/fillforge/
-```
-
-User data:
-
-```text
-~/.local/fillforge/
-```
-
-Canonical paths:
-
-```text
-~/.config/fillforge/config.yaml
-
-~/.local/fillforge/templates/
-~/.local/fillforge/runs/
-~/.local/fillforge/exports/
-~/.local/fillforge/cache/
-```
-
-Even on Windows, use:
-
-```text
-<HOME>/.config/fillforge
-<HOME>/.local/fillforge
-```
-
-Do not silently translate these into Windows AppData directories.
-
-Implement a single path module:
-
-```text
-packages/core/src/paths.ts
-```
-
-It should expose functions similar to:
-
-```ts
-export interface AppPaths {
-  home: string;
-  configDir: string;
-  configFile: string;
-  dataDir: string;
-  templatesDir: string;
-  runsDir: string;
-  exportsDir: string;
-  cacheDir: string;
-}
-
-export function getAppPaths(): AppPaths;
-```
-
-Use:
-
-```ts
-os.homedir();
-```
-
-for resolving the user's home directory.
-
-Tests MUST be able to override the home/data root without touching the real user's files.
-
-For example:
-
-```text
-FILLFORGE_HOME=/tmp/fillforge-test
-```
-
-or an equivalent dependency-injected path provider.
-
----
-
-# 5. Security Boundary
-
-Electron security must be conservative.
-
-Renderer MUST NOT get unrestricted Node.js access.
-
-Use:
-
-```text
-contextIsolation: true
-nodeIntegration: false
-sandbox: true where practical
-```
-
-Use a preload script with a narrow `contextBridge` API.
-
-Architecture:
-
-```text
-React Renderer
-      │
-      │ typed IPC
-      ▼
-Electron Preload
-      │
-      ▼
-Electron Main
-      │
-      ▼
-Core packages
-      │
-      ├── filesystem
-      ├── DOCX
-      ├── schema
-      └── extraction logic
-```
-
-Do NOT expose:
-
-```ts
-require;
-process;
-fs;
-child_process;
-```
-
-directly to renderer code.
-
-Renderer UI should call typed application operations.
-
-Example:
-
-```ts
-window.fillforge.templates.list();
-window.fillforge.templates.import();
-window.fillforge.templates.updateSchema();
-window.fillforge.runs.create();
-window.fillforge.runs.importExtraction();
-window.fillforge.runs.render();
-```
-
-IPC payloads must be validated with Zod at process boundaries.
-
-Do not trust renderer input merely because it came from our own UI.
-
----
-
-# 6. Repository Structure
-
-Use a pnpm workspace.
-
-Preferred structure:
-
-```text
-fillforge/
-├── AGENTS.md
-├── README.md
-├── package.json
-├── pnpm-workspace.yaml
-├── pnpm-lock.yaml
-├── tsconfig.json
-├── biome.json
-│
-├── apps/
-│   └── desktop/
-│       ├── package.json
-│       ├── electron/
-│       │   ├── main.ts
-│       │   ├── preload.ts
-│       │   ├── ipc/
-│       │   └── window.ts
-│       │
-│       ├── src/
-│       │   ├── main.tsx
-│       │   ├── App.tsx
-│       │   ├── pages/
-│       │   ├── components/
-│       │   ├── hooks/
-│       │   └── styles/
-│       │
-│       └── vite.config.ts
-│
-├── packages/
-│   ├── schema/
-│   │   └── src/
-│   │       ├── template.ts
-│   │       ├── field.ts
-│   │       ├── extraction.ts
-│   │       ├── run.ts
-│   │       └── index.ts
-│   │
-│   ├── core/
-│   │   └── src/
-│   │       ├── paths.ts
-│   │       ├── filesystem.ts
-│   │       ├── atomic-write.ts
-│   │       ├── ids.ts
-│   │       └── errors.ts
-│   │
-│   ├── templates/
-│   │   └── src/
-│   │       ├── repository.ts
-│   │       ├── inspect.ts
-│   │       ├── bindings.ts
-│   │       └── service.ts
-│   │
-│   ├── docx/
-│   │   └── src/
-│   │       ├── renderer.ts
-│   │       ├── docxtemplater-renderer.ts
-│   │       ├── inspector.ts
-│   │       └── errors.ts
-│   │
-│   ├── extraction/
-│   │   └── src/
-│   │       ├── prompt-builder.ts
-│   │       ├── result-parser.ts
-│   │       ├── validator.ts
-│   │       └── normalizer.ts
-│   │
-│   ├── runs/
-│   │   └── src/
-│   │       ├── repository.ts
-│   │       ├── service.ts
-│   │       └── review.ts
-│   │
-│   └── tools/
-│       └── src/
-│           ├── inspect-template.ts
-│           ├── extract-fields.ts
-│           ├── validate-fields.ts
-│           ├── render-document.ts
-│           └── index.ts
-│
-└── tests/
-    ├── fixtures/
-    │   ├── templates/
-    │   └── extraction/
-    └── integration/
-```
-
-Do not over-fragment packages immediately if it makes initial development cumbersome.
-
-However, maintain these logical boundaries even if some packages are temporarily combined.
-
----
-
-# 7. TypeScript 7
-
-Use TypeScript 7.
-
-Do not configure the project as if it were TypeScript 5.
-
-Important TypeScript 7 behavior must be accounted for.
-
-Use strict typing.
-
-Do not disable strict mode.
-
-Explicitly configure:
-
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "target": "ES2024",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "types": []
-  }
-}
-```
-
-Individual packages should specify required globals explicitly.
-
-For Node/Electron packages:
-
-```json
-{
-  "compilerOptions": {
-    "types": ["node"]
-  }
-}
-```
-
-Renderer packages should not accidentally inherit Node globals.
-
-Avoid tooling that requires TypeScript's old programmatic compiler API unless verified compatible
-with TypeScript 7.
-
-Prefer Biome for formatting and basic linting instead of making ESLint/typescript-eslint part of the
-critical path.
-
-Required scripts should include:
-
-```text
+The application MUST NOT treat the product as a direct image-to-Word replacement pipeline. The
+structured business record is a first-class domain object and is the boundary between extraction and
+rendering.
+
+| Stage             | Input                                | Output                              | Persistence                            |
+| ----------------- | ------------------------------------ | ----------------------------------- | -------------------------------------- |
+| Template import   | User-selected DOCX                   | Template directory and initial YAML | template.docx, template.yaml           |
+| Inspection        | Template DOCX and YAML               | Placeholder report                  | No new canonical artifact              |
+| Run creation      | Template ID and optional evidence    | Run metadata and copied evidence    | metadata.json, input/                  |
+| Prompt generation | Template schema and prompt version   | Prompt plus expected JSON shape     | prompt.md                              |
+| Extraction import | Raw user-pasted text                 | Parsed extraction result and issues | extraction.json                        |
+| Review            | Extraction result and final values   | Review record and issues            | review.json                            |
+| Normalization     | Extraction plus review               | Business values                     | normalized.json                        |
+| Rendering         | Valid normalized values and bindings | Versioned DOCX                      | output/result-XXX.docx and result.docx |
+
+## 4. Technical baseline
+
+### 4.1 Required stack
+
+| Concern                       | Requirement                                                |
+| ----------------------------- | ---------------------------------------------------------- |
+| Package manager               | pnpm only                                                  |
+| External runtime              | Node.js 26.x; the root engine requirement is Node.js >= 26 |
+| Language                      | TypeScript 7.x with strict type checking                   |
+| Desktop runtime               | Electron 44.x                                              |
+| Renderer UI                   | React 19 and Vite                                          |
+| Runtime validation            | Zod                                                        |
+| Human-authored persistence    | YAML                                                       |
+| Machine-generated persistence | JSON                                                       |
+| DOCX engine                   | Docxtemplater behind a FillForge renderer interface        |
+| DOCX archive support          | PizZip                                                     |
+| Tests                         | Vitest                                                     |
+
+The repository MUST contain pnpm-lock.yaml. It MUST NOT contain package-lock.json, yarn.lock,
+bun.lock, bun.lockb, or a second package manager configuration.
+
+Electron embeds its own Node runtime. Main-process and preload code MUST remain compatible with the
+Node runtime shipped by the selected Electron version and MUST NOT assume Node 26-only APIs. Node 26
+is the baseline for development tools, tests, builds, and the external CLI.
+
+### 4.2 Required quality commands
+
+The following root commands MUST remain available:
+
+```bash
 pnpm dev
 pnpm build
 pnpm typecheck
 pnpm lint
 pnpm format
+pnpm format:check
 pnpm test
+pnpm test:watch
 ```
 
-`pnpm typecheck` must use TypeScript 7.
+A change is ready for review only when the relevant quality commands pass. Changes to domain,
+persistence, IPC, or rendering code SHOULD run the full set.
 
----
+### 4.3 Platform policy
 
-# 8. Core Domain Model
+The canonical storage layout MUST be identical on Linux, macOS, and Windows. The implementation MUST
+NOT silently replace it with AppData, Application Support, Electron userData, or another
+platform-specific application-data root.
 
-The main domain concepts are:
+The application MAY use native Electron dialogs and shell integration for user-selected files. Those
+APIs MUST NOT redefine canonical storage.
+
+## 5. Architecture and package boundaries
+
+### 5.1 Runtime boundary
 
 ```text
-Template
-FieldDefinition
-TemplateBinding
-ExtractionSchema
-ExtractionResult
-ReviewedRecord
-Run
-Artifact
+React renderer
+      │
+      │ narrow typed contextBridge API
+      ▼
+Electron preload
+      │
+      │ validated IPC
+      ▼
+Electron main
+      │
+      ▼
+Application services
+      ├── schema
+      ├── core filesystem and configuration
+      ├── templates
+      ├── extraction
+      ├── runs
+      └── DOCX renderer
 ```
 
-Do not make DOCX placeholders themselves the central business model.
+The renderer MUST NOT have unrestricted Node.js or filesystem access. Domain logic MUST NOT depend
+on React, Electron, or renderer state.
 
-Separate:
+### 5.2 Workspace responsibilities
+
+| Package or directory  | Responsibility                                                              | Required boundary                                          |
+| --------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| packages/schema       | Zod schemas and shared domain types                                         | No filesystem or Electron dependency                       |
+| packages/core         | Paths, atomic writes, filesystem helpers, IDs, configuration, domain errors | Canonical storage and safety primitives                    |
+| packages/docx         | DocumentRenderer interface and Docxtemplater implementation                 | Docxtemplater types do not leak into domain packages       |
+| packages/templates    | Template repository, import, inspection report, and bindings                | Owns template lifecycle                                    |
+| packages/extraction   | Prompt generation, result parsing, validation, and normalization            | Provider-neutral extraction logic                          |
+| packages/runs         | Run repository, artifact lifecycle, review, and rendering orchestration     | Owns run lifecycle and immutability rules                  |
+| packages/tools        | CLI commands over the same application services                             | Must not duplicate business rules                          |
+| apps/desktop/electron | Main process, preload, IPC validation, dialogs, and safe shell operations   | Only renderer-facing process with direct filesystem access |
+| apps/desktop/src      | React views and renderer state                                              | Must use the preload API                                   |
+
+### 5.3 Dependency rules
+
+1. Shared contracts belong in packages/schema.
+2. Filesystem access belongs in packages/core or an explicitly owned repository.
+3. UI code MUST call application operations through the preload API.
+4. CLI commands MUST call the same services as the desktop application.
+5. Provider-specific AI code MUST NOT be added to the domain packages.
+6. A database repository, cloud service, agent runtime, or MCP server MUST NOT be introduced without
+   an explicit product decision.
+7. Files over 1,000 lines MUST be considered for decomposition before adding a new responsibility.
+
+## 6. Canonical persistence
+
+### 6.1 Source of truth
+
+The filesystem is the only canonical persistence layer. FillForge MUST NOT use a database for
+templates, runs, configuration, review data, or rendered output.
+
+The following are explicitly prohibited as canonical storage:
+
+- SQLite, PostgreSQL, MySQL, LevelDB, and other SQL or embedded databases.
+- IndexedDB, PouchDB, and Dexie.
+- Prisma, Drizzle, TypeORM, Sequelize, or equivalent persistence ORMs.
+- A single aggregate state file containing all templates and runs.
+- A persisted index that cannot be rebuilt from ordinary artifacts.
+
+A rebuildable cache MAY be added later, but it MUST remain disposable and non-canonical.
+
+### 6.2 Canonical paths
+
+The path module in packages/core/src/paths.ts MUST be the single source of truth.
 
 ```text
-DOCX placeholder
-Business field
-Extracted value
+<home>/.config/fillforge/config.yaml
+
+<home>/.local/fillforge/templates/
+<home>/.local/fillforge/runs/
+<home>/.local/fillforge/exports/
+<home>/.local/fillforge/cache/
+<home>/.local/fillforge/logs/
 ```
 
-They may be 1:1 in simple cases, but the architecture must not assume this.
+The home root is resolved from the FILLFORGE_HOME environment variable when present; otherwise it is
+resolved with the operating system home-directory API. FILLFORGE_HOME overrides the logical home
+root, not the layout beneath it.
 
-Example:
+The application MUST be able to initialize this layout without deleting existing data. Tests MUST
+use an isolated root and MUST NOT write to the developer's real FillForge directories.
+
+### 6.3 Directory layout
 
 ```text
-Business field:
-invoice_date = 2026-09-16
+<home>/.config/fillforge/
+└── config.yaml
 
-DOCX bindings:
-invoice_year  ← invoice_date.year
-invoice_month ← invoice_date.month
-invoice_day   ← invoice_date.day
+<home>/.local/fillforge/
+├── templates/
+│   └── <template-id>/
+│       ├── template.docx
+│       ├── template.yaml
+│       └── README.md                  optional human notes
+├── runs/
+│   └── <run-ulid>/
+│       ├── metadata.json
+│       ├── input/
+│       │   └── copied source evidence
+│       ├── prompt.md
+│       ├── extraction.json
+│       ├── review.json
+│       ├── normalized.json
+│       └── output/
+│           ├── result-001.docx
+│           ├── result-002.docx
+│           └── result.docx             newest output mirror
+├── exports/
+├── cache/
+└── logs/
 ```
 
-Another example:
+Template directories MUST contain the application-owned copy of the DOCX. Runtime run artifacts MUST
+NOT be stored inside a template directory.
 
-```text
-Business field:
-total_amount = 1234.50
+### 6.4 Atomic writes
 
-DOCX binding:
-amount_uppercase
-    ← chineseCurrencyUppercase(total_amount)
-```
+Mutable YAML and JSON files MUST be written through the atomic-write helper. The implementation MUST
+write a temporary file in the target directory, close it, and rename it into place. Rendered binary
+artifacts MUST use the same recoverable write strategy.
 
-The pipeline must therefore be:
+The application MUST NOT mutate a large aggregate state file to represent ordinary domain changes.
 
-```text
-AI extraction
-      ↓
-business record
-      ↓
-normalization
-      ↓
-validation
-      ↓
-binding transforms
-      ↓
-DOCX placeholders
-```
+### 6.5 Schema version policy
 
----
+Every persisted YAML or JSON domain file MUST include a numeric schema_version. Current supported
+versions are:
 
-# 9. Template Storage Format
+- config.yaml: 1
+- template.yaml: 1
+- metadata.json: 1
+- extraction.json wrapper: 1
+- review.json: 1
+- normalized.json: 1
 
-Each template is a directory.
+prompt.md is a human-readable artifact rather than a YAML/JSON domain file. Its prompt version is
+recorded in metadata.json and its expected JSON block is stored with the prompt.
 
-Example:
+On load, the application MUST:
 
-```text
-~/.local/fillforge/templates/invoice-cn/
-├── template.docx
-├── template.yaml
-└── README.md
-```
+1. Parse the file.
+2. Reject an explicitly unsupported newer schema version.
+3. Validate the parsed value with the corresponding Zod schema.
+4. Reject an ID that does not match its containing directory where applicable.
+5. Avoid silently rewriting files on application startup.
 
-`README.md` is optional.
+Future shape changes MUST use explicit migrations such as migrateTemplateV1ToV2. Migrations MUST
+preserve the original file until the migration policy explicitly permits replacement.
 
-Do not put runtime extraction data inside template directories.
+## 7. Domain data contracts
 
-Example `template.yaml`:
+### 7.1 Identifiers
+
+- Template IDs MUST match ^[a-z0-9][a-z0-9._-]*$.
+- Template IDs MUST be stable machine identifiers and SHOULD use lowercase snake_case or kebab-case.
+- Run IDs MUST be ULIDs accepted by the current run ID schema: 26 Crockford Base32 characters,
+  beginning with a timestamp character in the range 0–7.
+- Display labels MUST NOT be used as identifiers.
+- Repository methods MUST validate IDs before constructing paths.
+
+### 7.2 Template schema
+
+A template configuration MUST have this shape:
 
 ```yaml
 schema_version: 1
-
-id: invoice-cn
-name: 中国发票
-description: 从中国发票提取信息并生成目标文档
+id: invoice
+name: Invoice
+description: Extract invoice data and render a completed document
 
 document:
   file: template.docx
 
 fields:
   invoice_number:
-    label: 发票号码
-    description: 发票上明确标注的发票号码
+    label: Invoice number
+    description: The number explicitly labelled as the invoice number
     type: string
     required: true
-
     extraction:
-      instruction: >
-        找到明确标记为“发票号码”的值。 不要将“发票代码”作为发票号码。
-
+      instruction: Do not confuse the invoice number with the invoice code.
     normalization:
       trim: true
       remove_spaces: true
-
     validation:
       regex: '^[0-9A-Za-z-]+$'
 
   invoice_date:
-    label: 开票日期
-    description: 发票票面上的开票日期
+    label: Invoice date
     type: date
     required: true
-
-    extraction:
-      instruction: >
-        提取票面上标记为开票日期的日期。
-
     output:
       format: YYYY-MM-DD
-
-  seller_name:
-    label: 销售方名称
-    description: 销售方企业名称
-    type: string
-    required: true
-
-    extraction:
-      instruction: >
-        从销售方区域提取企业名称。 不要返回购买方名称。
+    validation:
+      date_format: YYYY-MM-DD
 
   total_amount:
-    label: 价税合计
-    description: 发票最终含税总金额
+    label: Total amount
     type: number
     required: true
-
-    extraction:
-      instruction: >
-        提取价税合计的小写金额。 不要返回税额或未税金额。
+    validation:
+      minimum: 0
 
 bindings:
   invoice_number:
     source: invoice_number
-
   invoice_date:
     source: invoice_date
-
-  seller_name:
-    source: seller_name
-
   total_amount:
     source: total_amount
 ```
 
-The exact schema may evolve, but preserve this separation.
+The schema contract is:
 
----
+- document.file MUST be a non-empty relative path that resolves inside the template directory.
+- fields MUST be a mapping of field keys to field definitions.
+- Field types are string, number, date, and boolean.
+- required defaults to true when omitted.
+- extraction.instruction is optional free text.
+- normalization supports trim and remove_spaces.
+- validation supports regex, minimum, maximum, date_format, and enum.
+- output.format is optional and is used for date formatting.
+- bindings map DOCX placeholder names to a configured field source.
+- A binding source MUST refer to a configured field.
+- JavaScript expressions MUST NOT be stored in YAML.
+- Configuration MUST NOT be evaluated with eval or an equivalent dynamic execution mechanism.
 
-# 10. Schema Versioning
+Field keys SHOULD use stable snake_case names. Human-facing labels, descriptions, and extraction
+instructions MAY use any language.
 
-Every persisted YAML/JSON domain file MUST have:
+### 7.3 DOCX placeholders and inspection
 
-```yaml
-schema_version: 1
-```
-
-or:
-
-```json
-{
-  "schema_version": 1
-}
-```
-
-Do not silently change persisted file shapes.
-
-Future migrations should use explicit code:
-
-```ts
-migrateTemplateV1ToV2();
-```
-
-The application should reject unsupported newer schema versions with a clear error.
-
-Do not automatically mutate files merely because the application launched.
-
----
-
-# 11. Placeholder Convention
-
-Use a clear placeholder syntax in DOCX:
+DOCX placeholders MUST use Docxtemplater-compatible names such as:
 
 ```text
 {invoice_number}
 {invoice_date}
-{seller_name}
 {total_amount}
 ```
 
-Use Docxtemplater-compatible syntax.
+The inspection implementation MUST be DOCX-aware and MUST detect a visible placeholder split across
+Word XML runs. A naive regular expression over a single raw XML string is not sufficient.
 
-Avoid placeholder IDs such as:
+Inspection returns:
 
-```text
-{占位符1}
-{占位符2}
-```
+- placeholders: every discovered placeholder, returned in normalized key order;
+- unconfigured: discovered placeholders with no binding entry;
+- unreferenced: configured fields not referenced by a binding for a discovered placeholder.
 
-Field keys should be stable machine identifiers.
+A configured field and a DOCX placeholder are separate concepts. A one-to-one mapping is permitted
+but MUST NOT be assumed by the domain model.
 
-Preferred convention:
+### 7.4 Application configuration
 
-```text
-snake_case
-```
-
-Examples:
-
-```text
-invoice_number
-invoice_date
-buyer_name
-seller_name
-total_amount
-```
-
-Labels and descriptions may be Chinese or any other language.
-
-The stable key must not depend on the human-facing label.
-
----
-
-# 12. DOCX Inspection
-
-The app should support importing a `.docx` and discovering placeholders.
-
-Workflow:
-
-```text
-Import DOCX
-    ↓
-inspect template
-    ↓
-discover placeholder keys
-    ↓
-compare against template.yaml
-    ↓
-show unconfigured placeholders
-```
-
-Do NOT parse DOCX placeholders using a naive regex over `word/document.xml`.
-
-Word may split visible text across XML runs.
-
-Prefer Docxtemplater's parser/inspection mechanisms or another DOCX-aware approach capable of
-handling run boundaries.
-
-For each detected placeholder, show configuration fields:
-
-```text
-Key
-Label
-Description
-Type
-Required
-Extraction instruction
-Validation
-Normalization
-```
-
-Example UI:
-
-```text
-Detected placeholder:
-
-invoice_number
-
-Display name:
-[ 发票号码 ]
-
-Meaning:
-[ 发票上明确标注的发票号码 ]
-
-AI extraction instruction:
-[ 提取“发票号码”，不要提取“发票代码” ]
-
-Type:
-[ string ▼ ]
-
-Required:
-[x]
-```
-
-Saving this writes `template.yaml`.
-
----
-
-# 13. DocumentRenderer Interface
-
-Docxtemplater is an implementation detail.
-
-Do not let Docxtemplater types leak through domain packages.
-
-Define an interface approximately like:
-
-```ts
-export interface TemplateInspection {
-  placeholders: string[];
-}
-
-export interface DocumentRenderer {
-  inspect(document: Uint8Array): Promise<TemplateInspection>;
-
-  render(input: { document: Uint8Array; values: Record<string, unknown> }): Promise<Uint8Array>;
-}
-```
-
-Implement:
-
-```text
-DocxtemplaterRenderer
-```
-
-using:
-
-```text
-docxtemplater
-pizzip
-```
-
-Future engines must be swappable.
-
-Possible future implementations:
-
-```text
-RustDocumentRenderer
-LibreOfficeDocumentRenderer
-RemoteDocumentRenderer
-```
-
-None need to be implemented now.
-
----
-
-# 14. Prompt Generation
-
-The application must generate a complete extraction prompt from `template.yaml`.
-
-Users should not need to write prompt engineering manually.
-
-For a template such as:
+config.yaml MUST use this shape:
 
 ```yaml
-fields:
-  invoice_number:
-    label: 发票号码
-    type: string
-    extraction:
-      instruction: 不要和发票代码混淆
+schema_version: 1
+ui:
+  theme: system
+editor:
+  show_advanced_fields: false
+extraction:
+  prompt_version: fillforge-extraction-v1
 ```
 
-generate a prompt conceptually similar to:
+Supported values:
 
-```text
-You are a structured document information extractor.
+- ui.theme: system, light, or dark.
+- editor.show_advanced_fields: boolean.
+- extraction.prompt_version: a non-empty string no longer than 100 characters.
 
-Inspect the documents/images supplied by the user.
+Missing optional sections resolve to the defaults above. A missing config file MUST load defaults;
+first launch MUST NOT require an empty configuration file to exist.
 
-Extract only the requested fields.
+Secrets MUST NOT be written to config.yaml by the MVP.
 
-Do not guess.
+### 7.5 Run metadata
 
-If a field cannot be reliably determined, return null.
+metadata.json MUST contain:
 
-Requested fields:
-
-invoice_number
-Meaning: 发票号码
-Type: string
-Extraction rule:
-不要和发票代码混淆
-
-Return valid JSON only.
-
-Expected format:
-
+```json
 {
-  "invoice_number": {
-    "value": "string or null",
-    "status": "found | not_found | ambiguous",
-    "evidence": "short supporting text or null"
-  }
+  "schema_version": 1,
+  "id": "01K5A000000000000000000000",
+  "created_at": "2026-09-16T12:30:00.000Z",
+  "template_id": "invoice",
+  "template_schema_version": 1,
+  "prompt_version": "fillforge-extraction-v1",
+  "attachments": [
+    {
+      "filename": "invoice.png",
+      "original_filename": "invoice.png",
+      "media_type": "image/png"
+    }
+  ]
 }
 ```
 
-Prompt generation must be deterministic for a given:
+The run ID MUST equal its directory name. Attachments MUST record the stored filename, the sanitized
+original filename, and the detected or supplied media type.
 
-```text
-template schema version
-prompt generator version
-```
+### 7.6 Extraction contract
 
-Record a `prompt_version`.
-
-Example:
-
-```text
-fillforge-extraction-v1
-```
-
-Do not make generated prompts dependent on UI code.
-
-Implement prompt generation in:
-
-```text
-packages/extraction/
-```
-
----
-
-# 15. AI Output Contract
-
-Do not ask AI models to edit YAML.
-
-Do not ask AI models to modify DOCX.
-
-Do not ask AI models to produce a final document.
-
-AI's role is:
-
-```text
-unstructured evidence
-        ↓
-structured extraction result
-```
-
-Expected output:
+The external AI exchange uses an unwrapped field mapping:
 
 ```json
 {
   "invoice_number": {
     "value": "12345678",
     "status": "found",
-    "evidence": "发票号码：12345678"
+    "evidence": "Invoice number: 12345678"
   },
   "invoice_date": {
     "value": "2026-09-16",
     "status": "found",
-    "evidence": "开票日期：2026年09月16日"
+    "evidence": "Invoice date: 2026-09-16"
   },
-  "seller_name": {
+  "total_amount": {
     "value": null,
     "status": "ambiguous",
     "evidence": null
@@ -992,184 +488,36 @@ Expected output:
 }
 ```
 
-Minimum status values:
+Each field MUST contain value, status, and evidence:
 
-```text
-found
-not_found
-ambiguous
-```
+- status MUST be found, not_found, or ambiguous.
+- evidence MUST be a short supporting text or null.
+- value MUST match the configured field type when present.
+- value MUST be null when status is not_found or ambiguous.
+- The extractor MUST NOT be treated as an authoritative source of confidence scores.
+- The prompt MUST instruct the model not to guess and to return JSON only.
 
-Do NOT rely on model-generated numeric confidence as authoritative.
-
-Evidence is more useful than arbitrary confidence values.
-
-Confidence may be added later but is not required.
-
----
-
-# 16. Extraction Import
-
-MVP does not require model API integration.
-
-Required workflow:
-
-```text
-Template
-   ↓
-Generate Prompt
-   ↓
-[Copy Prompt]
-   ↓
-user opens AI application
-   ↓
-user attaches source image/PDF
-   ↓
-AI returns JSON
-   ↓
-user copies JSON
-   ↓
-[Paste AI Result]
-   ↓
-application parses + validates result
-```
-
-The UI should accept:
-
-```text
-raw JSON
-```
-
-and tolerate surrounding Markdown fences such as:
-
-````text
-```json
-{ ... }
-````
-
-````
-
-Strip obvious Markdown fences before parsing.
-
-Do NOT attempt aggressive recovery of badly malformed arbitrary text in MVP.
-
-If JSON is malformed, show a useful parse error.
-
-The user should be able to correct it manually.
-
----
-
-# 17. Review UI
-
-AI output MUST NOT immediately produce a final document.
-
-Always provide a review step.
-
-Example:
-
-```text
-┌─────────────────────────────────────────────┐
-│ 发票号码                                    │
-│ 12345678                            ✓ found │
-│ Evidence: 发票号码：12345678                │
-├─────────────────────────────────────────────┤
-│ 开票日期                                    │
-│ 2026-09-16                          ✓ found │
-│ Evidence: 开票日期：2026年09月16日           │
-├─────────────────────────────────────────────┤
-│ 销售方名称                                  │
-│ [____________________________]              │
-│                                    ambiguous │
-└─────────────────────────────────────────────┘
-````
-
-Users must be able to:
-
-- accept values,
-- edit values,
-- fill missing values,
-- clear values,
-- see evidence,
-- see validation errors.
-
-Keep:
-
-```text
-model value
-final reviewed value
-```
-
-separate.
-
-Do not overwrite the original model extraction.
-
----
-
-# 18. Run Storage
-
-Each execution is stored as a self-contained directory.
-
-Example:
-
-```text
-~/.local/fillforge/runs/01K5A.../
-├── metadata.json
-├── input/
-│   ├── invoice.jpg
-│   └── supporting.pdf
-├── prompt.md
-├── extraction.json
-├── review.json
-├── normalized.json
-└── output/
-    └── result.docx
-```
-
-Some files may not exist until the corresponding stage has happened.
-
-Example `metadata.json`:
+The persisted extraction artifact wraps that exchange:
 
 ```json
 {
   "schema_version": 1,
-  "id": "01K5A...",
-  "created_at": "2026-09-16T12:30:00.000Z",
-  "template_id": "invoice-cn",
-  "template_schema_version": 1,
-  "prompt_version": "fillforge-extraction-v1"
+  "result": {
+    "invoice_number": {
+      "value": "12345678",
+      "status": "found",
+      "evidence": "Invoice number: 12345678"
+    }
+  }
 }
 ```
 
-Use sortable IDs.
+The application MUST preserve the parsed model result as an immutable extraction artifact. Semantic
+validation issues MAY be returned to the UI while retaining the parsed artifact for review.
 
-ULID is preferred.
+### 7.7 Review contract
 
-UUIDv7 is also acceptable.
-
-Do not use sequential numeric database-style IDs.
-
----
-
-# 19. Immutable Evidence
-
-Preserve AI input/output information for debugging and future evaluation.
-
-Do not rewrite:
-
-```text
-prompt.md
-extraction.json
-```
-
-after review.
-
-Human corrections go in:
-
-```text
-review.json
-```
-
-Example:
+review.json MUST contain:
 
 ```json
 {
@@ -1179,535 +527,373 @@ Example:
       "model_value": "12345678",
       "final_value": "12345679",
       "decision": "corrected"
-    },
-    "invoice_date": {
-      "model_value": "2026-09-16",
-      "final_value": "2026-09-16",
-      "decision": "accepted"
     }
   }
 }
 ```
 
-Allowed decisions:
+Allowed decisions are accepted, corrected, rejected, and filled_manually.
 
-```text
-accepted
-corrected
-rejected
-filled_manually
-```
+The review builder MUST preserve model_value and MUST NOT overwrite extraction.json. It MUST include
+configured template fields so a missing model field can be filled or rejected explicitly. The normal
+effective value is final_value when a review entry exists, otherwise the model value.
 
-This data will later become the evaluation dataset.
+### 7.8 Normalized record
 
-It is valuable product data.
+normalized.json MUST contain:
 
-Preserve it.
-
----
-
-# 20. Atomic File Writes
-
-Avoid corrupting YAML/JSON files if the process crashes.
-
-For mutable files:
-
-```text
-write temporary file
-fsync/close where appropriate
-rename into place
-```
-
-Provide an atomic write helper.
-
-Conceptually:
-
-```ts
-await atomicWriteFile(target, JSON.stringify(value, null, 2));
-```
-
-Do not implement application state through repeated mutation of one giant JSON file.
-
-Bad:
-
-```text
-~/.local/fillforge/state.json
-```
-
-containing every template and run.
-
-Good:
-
-```text
-templates/<id>/...
-runs/<id>/...
-```
-
-One logical entity should have its own files/directory.
-
----
-
-# 21. Repository Interfaces
-
-Filesystem operations should be behind domain-oriented repository APIs.
-
-This is NOT a database abstraction.
-
-Example:
-
-```ts
-export interface TemplateRepository {
-  list(): Promise<TemplateSummary[]>;
-
-  load(id: string): Promise<Template>;
-
-  create(input: CreateTemplateInput): Promise<Template>;
-
-  saveSchema(id: string, schema: TemplateSchema): Promise<void>;
-
-  delete(id: string): Promise<void>;
+```json
+{
+  "schema_version": 1,
+  "values": {
+    "invoice_date": "2026-09-16",
+    "total_amount": 1234.5
+  }
 }
 ```
 
-Implementation:
+This is a derived artifact. It MUST be rebuilt from the current extraction and review records before
+rendering. A review save MUST invalidate an existing normalized artifact.
 
-```text
-FileTemplateRepository
-```
+Normalization is deterministic and best-effort:
 
-Similarly:
+- strings MAY be trimmed and have ordinary spaces removed according to field configuration;
+- numeric strings MAY be converted to finite numbers;
+- boolean strings true and false MAY be converted to booleans;
+- calendar dates MAY be normalized to output.format or YYYY-MM-DD;
+- blank values and null values are omitted from the normalized values mapping;
+- values that cannot be normalized remain available for validation to reject.
+
+### 7.9 Document renderer boundary
+
+The DOCX implementation MUST be hidden behind this domain boundary:
 
 ```ts
-export interface RunRepository {
-  create(...): Promise<Run>;
-  load(id: string): Promise<Run>;
-  list(...): Promise<RunSummary[]>;
-  saveExtraction(...): Promise<void>;
-  saveReview(...): Promise<void>;
+export interface TemplateInspection {
+  placeholders: string[];
+}
+
+export interface RenderInput {
+  document: Uint8Array;
+  values: Record<string, unknown>;
+}
+
+export interface DocumentRenderer {
+  inspect(document: Uint8Array): Promise<TemplateInspection>;
+  render(input: RenderInput): Promise<Uint8Array>;
 }
 ```
 
-Do NOT add:
+Docxtemplater and PizZip MAY be used inside packages/docx. Their implementation types MUST NOT
+become part of the template, extraction, or run contracts.
+
+### 7.10 Binding transforms
+
+Binding keys are DOCX placeholders and binding.source is a business field. Transforms MUST be
+deterministic and MUST NOT call an AI provider.
+
+The MVP registry contains:
+
+- identity
+- date_year
+- date_month
+- date_day
+- trim
+- uppercase
+- lowercase
+- chinese_currency_uppercase
+
+An unknown transform MUST NOT silently execute arbitrary code. A missing source value MAY leave the
+placeholder unresolved for validation to report before rendering.
+
+## 8. Behavioral requirements
+
+### 8.1 Template lifecycle
+
+1. Import MUST copy the selected DOCX to templates/<id>/template.docx.
+2. The application MUST continue to work if the original source file is later moved or deleted.
+3. Template import MUST initialize an empty fields and bindings mapping.
+4. Save MUST validate the complete template schema and ensure the configured document path stays
+   inside the template directory.
+5. Duplicate MUST copy the directory, assign a valid new ID, and update the schema ID.
+6. Delete MUST remove only the selected template directory.
+7. Listing SHOULD continue when an individual template is unreadable; the unreadable entry MAY be
+   surfaced with a safe diagnostic instead of hiding healthy templates.
+
+### 8.2 Prompt generation
+
+1. Prompt generation MUST be a pure function of the template schema and prompt version.
+2. A template with no configured fields MUST be rejected with a useful error.
+3. The prompt MUST describe each field's key, label, type, required status, description, and
+   extraction instruction where present.
+4. The expected JSON structure MUST be generated from the same field definitions.
+5. The prompt MUST be written once per run. Repeated generation MUST return the existing prompt.
+6. prompt.md MUST contain the prompt and the expected JSON structure.
+7. Changing the application setting MUST affect new runs; an existing run MUST retain its recorded
+   prompt version and immutable prompt artifact.
+
+### 8.3 Extraction import
+
+1. The input MUST be raw JSON or JSON surrounded by an obvious json Markdown fence.
+2. The parser MUST reject malformed JSON with a safe parse error.
+3. The parser MUST validate the field-object shape with Zod.
+4. Semantic validation MUST report missing required fields, unknown fields, type errors, invalid
+   dates, status/value conflicts, and configured rule violations.
+5. extraction.json MUST be write-once. A second import into the same run MUST be rejected.
+6. The parsed extraction MAY be stored even when semantic issues exist; rendering MUST remain
+   blocked until the effective business values pass validation.
+
+### 8.4 Review and normalization
+
+1. Review MUST be available only after an extraction exists.
+2. The UI MUST show value, status, evidence, and validation issues where available.
+3. A user MUST be able to accept, edit, clear, or manually fill a value.
+4. review.json MUST be atomically written and schema-validated.
+5. Saving review MUST invalidate normalized.json.
+6. Normalization MUST use final reviewed values when available.
+7. Normalization MUST run again before every render; a stale or missing normalized artifact MUST NOT
+   be trusted as the render input.
+
+### 8.5 Rendering and output
+
+1. Rendering MUST load the run's template by template_id.
+2. Rendering MUST validate all configured business fields immediately before DOCX generation.
+3. Rendering MUST reject required blanks, wrong types, invalid calendar dates, regex failures,
+   numeric range failures, date-format failures, enum failures, and unknown effective fields.
+4. Binding resolution MUST happen after business normalization and before DOCX rendering.
+5. The renderer MUST be deterministic for the same template bytes and resolved values.
+6. Every render MUST create the next result-XXX.docx version and retain previous versions.
+7. result.docx MUST be an exact copy of the newest versioned output.
+8. Rendered output MUST remain inside the run output directory.
+
+### 8.6 Run history
+
+- Run directories MUST be independently inspectable.
+- Run listing MUST be newest-first by created_at.
+- An unreadable run MUST NOT be modified or silently repaired during listing.
+- The application MUST be able to reopen a valid run and load its metadata, prompt, expected JSON,
+  extraction, review, normalized record, and generated outputs. The UI MUST display the user-facing
+  run stages and generated outputs; normalized.json remains an inspectable service artifact.
+- Source evidence MUST be copied into input/ and MUST NOT be modified in place.
+- Attachment filename collisions MUST be resolved with a deterministic suffix such as -2, -3.
+
+## 9. Validation rules
+
+Validation is a domain concern and MUST be reusable from the desktop and CLI.
+
+| Rule              | Required behavior                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| required          | Blank, null, or missing values are invalid for required fields.                                                  |
+| type              | string, finite number, boolean, or date string as configured.                                                    |
+| date              | Date fields MUST represent a real calendar date, not only a syntactically valid string.                          |
+| regex             | The configured regular expression MUST match the string representation. Invalid regex configuration is an issue. |
+| minimum / maximum | Numeric values MUST remain within configured inclusive bounds.                                                   |
+| date_format       | A date MUST round-trip through the configured token format.                                                      |
+| enum              | The value MUST equal one configured enum string.                                                                 |
+| unknown field     | A value not configured in the template is an issue.                                                              |
+
+Extraction-level rules additionally apply:
+
+- A required field missing from the extraction result is an issue.
+- A not_found or ambiguous field with a non-empty value is an issue.
+- A required not_found or ambiguous field is an issue.
+- A found field is validated against its field definition.
+- Optional missing fields MAY proceed to review but cannot be rendered if their final state violates
+  another configured rule.
+
+Review validation MAY normalize review input before checking it. Rendering validation MUST check the
+normalized business values without weakening the template contract.
+
+## 10. Desktop IPC contract
+
+### 10.1 API surface
+
+The preload MUST expose a narrow window.fillforge API with these operation groups:
+
+| Group     | Operations                                                                                       |
+| --------- | ------------------------------------------------------------------------------------------------ |
+| templates | list, import, load, saveSchema, inspect, duplicate, delete, promptPreview                        |
+| settings  | load, save                                                                                       |
+| runs      | create, list, load, generatePrompt, importExtraction, saveReview, normalize, render, attachFiles |
+| system    | openPath, showItemInFolder, exportCopy                                                           |
+
+Renderer code MUST NOT call ipcRenderer directly. All IPC channels MUST be validated in the main
+process with Zod before invoking a service.
+
+### 10.2 Channels and payloads
+
+Current channels are:
 
 ```text
-SqlTemplateRepository
-SqlRunRepository
+templates:list
+templates:import
+templates:load
+templates:update-schema
+templates:inspect
+templates:duplicate
+templates:delete
+templates:prompt-preview
+
+settings:load
+settings:save
+
+runs:create
+runs:list
+runs:load
+runs:generate-prompt
+runs:import-extraction
+runs:save-review
+runs:normalize
+runs:render
+runs:attach-files
+
+system:open-path
+system:show-item-in-folder
+system:export-copy
 ```
 
-unless explicitly requested in the future.
+Boundary requirements:
 
----
+- Empty operations MUST accept no meaningful payload.
+- ID-bearing operations MUST validate template IDs or ULID run IDs with shared schemas.
+- runs:create MUST accept only the template ID from the renderer; attachment paths MUST NOT be
+  supplied by renderer payloads.
+- runs:import-extraction MUST reject empty input and inputs longer than 2,000,000 characters.
+- settings:save MUST validate theme, advanced-field flag, and a trimmed prompt version between 1 and
+  100 characters.
+- IPC responses MUST use either { ok: true, data } or { ok: false, error }.
+- Error DTOs MUST contain code and message and MAY contain safe details. Arbitrary Node/Electron
+  errors and stack traces MUST NOT be sent to the renderer.
 
-# 22. In-memory Indexing
+### 10.3 Native file operations
 
-For MVP, listing runs/templates can simply scan directories.
+The main process owns native dialogs for DOCX import, source attachment, and export.
 
-Example:
+System open, reveal, and export operations MUST:
 
-```ts
-await fs.readdir(paths.templatesDir, {
-  withFileTypes: true
-});
+1. Accept only a path selected from an application result or another trusted main-process flow.
+2. Resolve the path and verify it is inside the FillForge data directory.
+3. Resolve symlinks and verify the real path remains inside that directory.
+4. Require an existing regular file for open, reveal, and export source operations.
+5. Permit export to a user-selected destination from the native save dialog.
+
+The renderer MUST NOT be given a general-purpose file read/write API.
+
+## 11. Security and privacy
+
+- BrowserWindow MUST use contextIsolation: true, nodeIntegration: false, sandbox: true where
+  supported, and webSecurity: true.
+- The preload MUST expose only the documented FillForge API.
+- Path construction MUST validate identifiers and prevent traversal.
+- Template document paths MUST remain inside the template directory, including after symlink
+  resolution.
+- Data file paths used by system operations MUST remain inside the data directory, including after
+  symlink resolution.
+- Imported templates and attachments MUST be copied; the originals MUST not be modified.
+- The MVP MUST NOT upload documents, images, PDFs, prompts, or extracted values automatically.
+- The MVP MUST NOT include telemetry, analytics, authentication, or a cloud backend.
+- Logs MUST avoid full document contents, image/PDF bytes, secrets, API keys, and credentials.
+- Debug logs MAY be written to debug-logs/; release logs belong in the configured per-user log
+  directory. The summary debug.log SHOULD be checked before a feature-specific debug log when
+  diagnosing a failure.
+- Future direct AI integration MUST make external transmission explicit and MUST define secret
+  storage before implementation.
+
+## 12. CLI contract
+
+The CLI MUST assemble the same services as the desktop application and MUST NOT contain a second
+implementation of domain behavior.
+
+```bash
+pnpm tsx packages/tools/src/index.ts inspect-template <templateId>
+pnpm tsx packages/tools/src/index.ts extract-fields <templateId>
+pnpm tsx packages/tools/src/index.ts validate-fields <templateId> <extraction.json>
+pnpm tsx packages/tools/src/index.ts render-document <runId>
 ```
 
-If performance becomes noticeable, maintain an in-memory index during application lifetime.
+Command semantics:
 
-Do not prematurely persist indexes.
+- inspect-template prints discovered placeholders and configuration gaps.
+- extract-fields prints the deterministic prompt and expected JSON structure.
+- validate-fields parses and validates an extraction file without mutating a run; on success, the
+  current CLI also prints normalized values.
+- render-document renders an existing run using the run service and writes output under its run
+  directory.
 
-The expected early scale is small enough for filesystem scanning.
+All commands MUST honor FILLFORGE_HOME.
 
----
+## 13. Testing and release gates
 
-# 23. Template Binding
+### 13.1 Required test coverage
 
-AI field definitions and DOCX placeholders must be decoupled.
+Tests MUST use temporary or environment-overridden roots and MUST cover:
 
-Example:
+- valid and invalid config, template, run, extraction, review, and normalized schemas;
+- unsupported schema versions;
+- invalid and traversal-prone identifiers and document paths;
+- placeholder inspection across Word XML run boundaries;
+- deterministic prompt output and expected JSON output;
+- plain JSON, fenced JSON, malformed JSON, missing fields, wrong types, not_found, and ambiguous
+  extraction cases;
+- blank strings, numeric coercion, boolean coercion, and invalid calendar dates;
+- all built-in binding transforms;
+- immutable prompt and extraction artifacts;
+- review persistence, normalized invalidation, and restart reads;
+- versioned outputs and newest-output mirroring;
+- typed IPC payload validation;
+- safe system path operations;
+- an end-to-end DOCX workflow using fixtures.
 
-```yaml
-bindings:
-  invoice_number:
-    source: invoice_number
+### 13.2 Quality gates
 
-  year:
-    source: invoice_date
-    transform: date_year
+Before merging a change, run:
 
-  month:
-    source: invoice_date
-    transform: date_month
-
-  day:
-    source: invoice_date
-    transform: date_day
-
-  amount_uppercase:
-    source: total_amount
-    transform: chinese_currency_uppercase
+```bash
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm format:check
+pnpm build
 ```
 
-Implement a transform registry:
-
-```ts
-export type BindingTransform = (value: unknown) => unknown;
-```
-
-Initial transforms may include:
-
-```text
-identity
-date_year
-date_month
-date_day
-trim
-uppercase
-lowercase
-```
-
-`chinese_currency_uppercase` may be added if useful.
-
-Transforms must be deterministic.
-
-AI should never be used for deterministic formatting.
-
----
-
-# 24. Validation
-
-Validation happens before rendering.
-
-Possible rules:
-
-```text
-required
-type
-regex
-minimum
-maximum
-date format
-enum
-```
-
-Use Zod internally where appropriate.
-
-Template YAML should remain implementation-neutral.
-
-Example:
-
-```yaml
-validation:
-  regex: '^[0-9]{8,20}$'
-```
-
-Do not store JavaScript expressions in YAML.
-
-Do not `eval()` configuration.
-
----
-
-# 25. Zod as Runtime Boundary
-
-Persisted files MUST be validated when loaded.
-
-IPC messages MUST be validated.
-
-AI extraction results MUST be validated.
-
-Examples:
-
-```text
-YAML → parse → Zod → domain object
-
-JSON → parse → Zod → extraction result
-
-IPC → Zod → service call
-```
-
-Do not scatter unchecked:
-
-```ts
-as SomeType
-```
-
-through the application.
-
-Prefer:
-
-```ts
-SomeSchema.parse(value);
-```
-
-or:
-
-```ts
-SomeSchema.safeParse(value);
-```
-
-depending on context.
-
----
-
-# 26. Error Handling
-
-Define domain errors.
-
-Examples:
-
-```text
-TemplateNotFoundError
-InvalidTemplateSchemaError
-DocxInspectionError
-DocxRenderError
-ExtractionParseError
-ValidationError
-UnsupportedSchemaVersionError
-```
-
-Errors exposed to renderer should be serialized into a safe structure:
-
-```ts
-interface AppErrorDto {
-  code: string;
-  message: string;
-  details?: unknown;
-}
-```
-
-Do not expose arbitrary Electron/Node stack traces to end users.
-
-During development, stacks should remain available in logs/devtools.
-
----
-
-# 27. Logging
-
-Keep logging simple.
-
-Do not add an observability platform.
-
-Logs may be written to:
-
-```text
-~/.local/fillforge/logs/
-```
-
-or emitted to stdout during development.
-
-Avoid logging complete sensitive documents by default.
-
-Do not log:
-
-```text
-entire images
-entire PDFs
-API keys
-full AI credentials
-```
-
-Log IDs and operation metadata instead.
-
----
-
-# 28. Settings
-
-Application configuration lives in:
-
-```text
-~/.config/fillforge/config.yaml
-```
-
-Example:
-
-```yaml
-schema_version: 1
-
-ui:
-  theme: system
-
-editor:
-  show_advanced_fields: false
-
-extraction:
-  prompt_version: fillforge-extraction-v1
-```
-
-Future AI provider configuration may look like:
-
-```yaml
-ai:
-  provider: openai
-  model: some-model
-```
-
-Secrets MUST NOT be written directly into this YAML unless explicitly required.
-
-When direct model integration is implemented, use a proper secret strategy.
-
-Do not implement AI provider credentials in the MVP unless required.
-
----
-
-# 29. MVP Screens
-
-Implement the following primary views.
-
-## Home
-
-Show:
-
-```text
-Templates
-Recent runs
-Import template
-```
-
-## Template List
-
-Show available template directories.
-
-Actions:
-
-```text
-Create
-Import DOCX
-Open
-Duplicate
-Delete
-```
-
-## Template Editor
-
-Sections:
-
-```text
-General
-Fields
-Bindings
-Prompt Preview
-DOCX placeholders
-```
-
-The editor should detect:
-
-```text
-placeholders present in DOCX but missing from config
-fields configured but no longer referenced
-```
-
-## New Run
-
-Select template.
-
-Optionally attach source materials for keeping with the run.
-
-Generate prompt.
-
-Buttons:
-
-```text
-Copy Prompt
-Copy Expected JSON Schema
-Paste AI Result
-```
-
-## Extraction Review
-
-Review/edit extracted values.
-
-Display:
-
-```text
-field label
-value
-status
-evidence
-validation state
-```
-
-## Render
-
-Render final `.docx`.
-
-Save under:
-
-```text
-run/output/
-```
-
-Provide:
-
-```text
-Open output
-Show in folder
-Export copy
-```
-
----
-
-# 30. MVP Scope
-
-The first usable milestone MUST support:
-
-1. Start Electron desktop app.
-2. Initialize `~/.config/fillforge` and `~/.local/fillforge`.
-3. Import a DOCX template.
-4. Detect placeholders.
-5. Create/edit semantic field configuration.
-6. Persist template configuration as YAML.
-7. Generate extraction prompt.
-8. Copy extraction prompt.
-9. Paste AI-generated JSON.
-10. Parse and validate extraction result.
-11. Review/edit values.
-12. Save original AI result separately from reviewed result.
-13. Bind reviewed fields to DOCX placeholders.
-14. Generate final DOCX.
-15. Preserve the complete run as filesystem artifacts.
-16. Reopen an old run and inspect what happened.
-
-That is MVP.
-
----
-
-# 31. Explicit Non-goals for MVP
-
-Do NOT implement unless needed for the above workflow:
-
-```text
-Agent runtime
-MCP server
-direct OpenAI API
-direct Anthropic API
-direct Gemini API
-OCR pipeline
-vector database
-embeddings
-RAG
-cloud accounts
-user authentication
-sync server
-team collaboration
-SQL
-background job queue
-plugin marketplace
-automatic email sending
-automatic file upload
-browser automation
-workflow graph editor
-```
-
-Do not build abstractions solely to support hypothetical future features.
-
-Leave clean seams instead.
-
----
-
-# 32. Future AI Integration Boundary
-
-Even though MVP does not invoke models directly, define an extraction interface that future
-providers can implement.
-
-Example:
+A failure in a domain-critical gate MUST be fixed or explicitly documented before merge.
+
+## 14. MVP acceptance criteria
+
+The following scenario is the release-level acceptance test:
+
+1. Launch the desktop application with only Node.js 26.x and pnpm installed.
+2. Import the invoice DOCX fixture.
+3. Confirm the application discovers invoice_number, invoice_date, seller_name, and total_amount,
+   including any split-run placeholder in the fixture.
+4. Configure field definitions and bindings, then confirm template.yaml is readable and versioned.
+5. Create a run and attach a source image or PDF; confirm the evidence is copied into input/.
+6. Generate a prompt; confirm the prompt and expected JSON are visible and prompt.md is immutable.
+7. Paste valid JSON, including a fenced response in one test; confirm extraction.json is persisted
+   once and issues are displayed when applicable.
+8. Review at least one field; confirm model_value remains unchanged, final_value is stored in
+   review.json, and normalized.json is invalidated.
+9. Attempt rendering with an invalid required value; confirm rendering is rejected with field
+   issues.
+10. Correct the value and render; confirm result-001.docx and result.docx exist and are identical.
+11. Render again; confirm a new version is retained and result.docx mirrors the newest version.
+12. Restart the application; confirm the template, run, review, and output remain available from
+    ordinary files without a database.
+13. Run the CLI inspection, validation, and rendering commands against the same isolated root.
+
+## 15. Explicit non-goals and future seams
+
+The following are outside the MVP and MUST NOT be added as incidental infrastructure:
+
+- direct OpenAI, Anthropic, Gemini, or other model-provider calls;
+- OCR, embeddings, vector databases, RAG, or cloud document processing;
+- agent runtimes, MCP servers, browser automation, or workflow graph editors;
+- user accounts, authentication, collaboration, sync, or remote storage;
+- SQL or embedded databases and background job queues;
+- automatic email sending, uploads, or external workflow execution;
+- Rust, Go, Python, Java, .NET, Docker, or LibreOffice runtime requirements.
+
+The provider-neutral extraction seam MAY be extended through an interface like:
 
 ```ts
 export interface Attachment {
@@ -1727,997 +913,31 @@ export interface Extractor {
 }
 ```
 
-Do NOT implement provider-specific details in domain packages.
+The MVP does not invoke this interface. Future providers MUST return the same domain extraction
+contract and MUST NOT move business validation or rendering responsibility into the provider.
 
-Possible future implementations:
+Future MCP or agent integrations MUST consume the same typed application services used by the UI and
+CLI. They MUST define workspace permissions and path exposure before implementation.
 
-```text
-OpenAIExtractor
-AnthropicExtractor
-GeminiExtractor
-```
+## 16. Change control
 
-The manual MVP flow can conceptually be:
+A change that modifies a persisted shape, security boundary, IPC contract, rendering semantics, or
+MVP acceptance criterion MUST update this document, the affected schemas/tests, and the README where
+applicable.
 
-```text
-ManualExternalExtractor
-```
+Contributors MUST:
 
-but it does not need to literally implement asynchronous model execution.
+1. Keep normative requirements in this document rather than in ad hoc task notes.
+2. Add or update tests for behavior changes.
+3. Keep package boundaries and canonical paths intact.
+4. Use explicit migrations for supported persisted-shape changes.
+5. Use English for source comments, documentation, generated project files, and commit messages.
+6. Use Conventional Commits for commit messages.
 
----
+Decisions requiring explicit product approval include any new persistence root, database, cloud
+backend, authentication, telemetry, direct AI dependency, agent runtime, MCP runtime, sidecar
+process, platform-specific canonical storage, or external transmission of user documents.
 
-# 33. Future Agent Runtime Boundary
-
-Core application operations should already resemble tools.
-
-Implement application services that can later be wrapped without redesign.
-
-Target operations:
-
-```text
-list_templates
-inspect_template
-get_template_schema
-create_run
-generate_extraction_prompt
-validate_extraction
-save_review
-render_document
-get_run
-list_runs
-```
-
-Each operation should have:
-
-```text
-typed input
-typed output
-Zod schema
-deterministic behavior where applicable
-```
-
-Future:
-
-```text
-Desktop UI ─┐
-CLI ────────┼── Core Tools
-MCP ────────┤
-Agent ──────┘
-```
-
-Do not make the Agent runtime own business logic.
-
-Correct future architecture:
-
-```text
-Agent runtime
-      ↓
-tools
-      ↓
-application services
-      ↓
-domain
-```
-
-Incorrect:
-
-```text
-Agent runtime
-      ↓
-random callbacks containing business logic
-```
-
----
-
-# 34. Future MCP Support
-
-Do NOT implement MCP during MVP.
-
-However, tool contracts should be easy to expose later.
-
-Potential future MCP tools:
-
-```text
-inspect_template
-get_template_schema
-generate_extraction_prompt
-validate_fields
-render_document
-```
-
-Filesystem paths should not be blindly exposed to remote clients.
-
-When MCP is eventually added, security and workspace permissions must be designed explicitly.
-
----
-
-# 35. Future Agent Runtime Options
-
-Do not commit to one runtime now.
-
-Potential future candidates include:
-
-```text
-OpenAI Agents SDK
-Mastra
-custom thin orchestration
-other TypeScript runtimes
-```
-
-The application should not need structural changes to adopt one.
-
-Agent runtimes should consume the same core tool contracts used by the desktop UI.
-
----
-
-# 36. UI Technology
-
-Use:
-
-```text
-React
-TypeScript
-Vite
-```
-
-Keep UI dependencies moderate.
-
-Do not introduce a giant component framework merely to accelerate the first screen.
-
-A lightweight component set is acceptable.
-
-Choose one coherent styling approach.
-
-Examples:
-
-```text
-plain CSS modules
-Tailwind
-small headless component library
-```
-
-Avoid mixing multiple styling systems.
-
-Functionality matters more than visual polish during initial implementation.
-
-Still, the application should feel like a desktop product, not an admin dashboard.
-
----
-
-# 37. State Management
-
-Do not add Redux by default.
-
-Prefer:
-
-```text
-React local state
-context where appropriate
-small query/cache abstraction if genuinely useful
-```
-
-Persistent application state belongs in files through main-process services.
-
-Renderer state is not canonical.
-
-Do not duplicate entire filesystem state into a giant frontend store.
-
----
-
-# 38. IPC Design
-
-Use explicit channels or a typed RPC-like wrapper.
-
-Example namespaces:
-
-```text
-templates:list
-templates:import
-templates:load
-templates:update-schema
-templates:inspect
-
-runs:create
-runs:list
-runs:load
-runs:save-extraction
-runs:save-review
-runs:render
-```
-
-Prefer a preload API such as:
-
-```ts
-interface FillForgeApi {
-  templates: {
-    list(): Promise<TemplateSummary[]>;
-    import(): Promise<TemplateSummary | null>;
-    load(id: string): Promise<Template>;
-    saveSchema(id: string, schema: TemplateSchema): Promise<void>;
-  };
-
-  runs: {
-    create(input: CreateRunInput): Promise<Run>;
-    load(id: string): Promise<Run>;
-    importExtraction(id: string, raw: string): Promise<ExtractionResult>;
-    saveReview(id: string, review: ReviewedRecord): Promise<void>;
-    render(id: string): Promise<RenderedArtifact>;
-  };
-}
-```
-
-Generate/share DTO schemas where useful.
-
----
-
-# 39. File Dialogs
-
-Use Electron-native file dialogs for:
-
-```text
-Import DOCX
-Attach image
-Attach PDF
-Export DOCX
-```
-
-Do not give renderer arbitrary filesystem access.
-
-The main process controls file access.
-
-When importing a template, COPY the original DOCX into:
-
-```text
-~/.local/fillforge/templates/<id>/template.docx
-```
-
-The application should not depend on the original source file continuing to exist.
-
----
-
-# 40. Source Attachments
-
-If the user chooses to preserve evidence for a run, copy it into:
-
-```text
-runs/<run-id>/input/
-```
-
-Do not modify the original file.
-
-Avoid filename collisions.
-
-Example:
-
-```text
-invoice.jpg
-invoice-2.jpg
-supporting.pdf
-```
-
-Preserve original names where practical.
-
-Record attachment metadata in `metadata.json`.
-
----
-
-# 41. Render Output
-
-Generated documents belong in:
-
-```text
-runs/<run-id>/output/
-```
-
-Default name:
-
-```text
-result.docx
-```
-
-If rerendering, either:
-
-```text
-result.docx
-```
-
-may be atomically replaced, or versioned outputs may be created:
-
-```text
-result-001.docx
-result-002.docx
-```
-
-Pick one simple policy for MVP and document it.
-
-Prefer retaining previous outputs if implementation remains simple.
-
----
-
-# 42. Testing Strategy
-
-Tests are required for domain-critical functionality.
-
-Use Node's built-in test runner or Vitest.
-
-Choose one.
-
-Tests must cover at minimum:
-
-## Schema
-
-```text
-valid template config
-invalid template config
-unsupported schema version
-```
-
-## Prompt generation
-
-Given a fixture template schema, generated prompt should be deterministic.
-
-Use snapshot/golden tests where appropriate.
-
-## Extraction parser
-
-Test:
-
-````text
-plain JSON
-JSON inside ```json fence
-missing field
-invalid type
-not_found
-ambiguous
-malformed JSON
-````
-
-## Binding transforms
-
-Test deterministic transforms.
-
-## DOCX rendering
-
-Have fixture `.docx` templates.
-
-Verify generated documents contain expected replacements.
-
-Where byte-for-byte comparison is inappropriate, inspect generated DOCX ZIP/XML content
-semantically.
-
-## Filesystem repository
-
-Run against a temporary fake home.
-
-Never touch the developer's real:
-
-```text
-~/.config/fillforge
-~/.local/fillforge
-```
-
-during tests.
-
----
-
-# 43. Fixture-driven Development
-
-Create fixtures early.
-
-At minimum:
-
-```text
-tests/fixtures/templates/simple/
-tests/fixtures/templates/invoice/
-tests/fixtures/extraction/
-```
-
-Create a tiny DOCX with placeholders such as:
-
-```text
-发票号码：{invoice_number}
-日期：{invoice_date}
-销售方：{seller_name}
-金额：{total_amount}
-```
-
-Use it throughout integration tests.
-
----
-
-# 44. Developer Experience
-
-The project must be runnable with:
-
-```bash
-pnpm install
-pnpm dev
-```
-
-Nothing else should be required for basic development.
-
-Do not require:
-
-```text
-Docker
-database server
-Python
-Java
-.NET runtime
-Rust toolchain
-Go toolchain
-LibreOffice
-```
-
-for MVP development.
-
-A fresh machine with:
-
-```text
-Node 26
-pnpm
-```
-
-should be sufficient.
-
----
-
-# 45. Package Scripts
-
-Root scripts should eventually support:
-
-```json
-{
-  "scripts": {
-    "dev": "...",
-    "build": "...",
-    "typecheck": "...",
-    "lint": "...",
-    "format": "...",
-    "test": "...",
-    "test:watch": "..."
-  }
-}
-```
-
-Do not create clever shell scripts for tasks pnpm can express clearly.
-
-Keep Windows compatibility in mind for package scripts.
-
-Avoid shell syntax that assumes Bash unless the script is explicitly a Node script.
-
----
-
-# 46. Formatting / Linting
-
-Use Biome unless a concrete incompatibility appears.
-
-The project should have one command for checking:
-
-```bash
-pnpm lint
-```
-
-and one for formatting:
-
-```bash
-pnpm format
-```
-
-Do not waste significant initial effort building a huge lint rule set.
-
-Priorities:
-
-```text
-correctness
-types
-tests
-clarity
-```
-
----
-
-# 47. Dependencies
-
-Keep production dependencies small.
-
-Expected initial dependencies approximately include:
-
-```text
-react
-react-dom
-zod
-yaml
-docxtemplater
-pizzip
-```
-
-Electron/build tooling:
-
-```text
-electron
-vite
-typescript
-@types/node
-@types/react
-@types/react-dom
-```
-
-plus whatever minimal Electron/Vite integration is selected.
-
-Use the latest compatible stable versions.
-
-Do not pin to old package generations without a reason.
-
-Avoid abandoned packages.
-
-Before adding a dependency, ask:
-
-```text
-Can Node/Electron/React already do this adequately?
-```
-
-Do not reimplement mature DOCX ZIP/template behavior manually merely to reduce dependencies.
-
----
-
-# 48. Coding Style
-
-Prefer explicit straightforward TypeScript.
-
-Avoid enterprise-style abstraction layers.
-
-Avoid classes unless they genuinely improve the model.
-
-Prefer:
-
-```ts
-type
-interface
-function
-small service objects
-```
-
-over complicated inheritance.
-
-Use domain names consistently.
-
-Good:
-
-```ts
-TemplateSchema;
-FieldDefinition;
-ExtractionResult;
-ReviewedRecord;
-TemplateBinding;
-```
-
-Bad:
-
-```ts
-DataManager;
-Processor;
-Helper;
-CommonService;
-Utils2;
-```
-
-Do not create generic "utils" dumping grounds.
-
----
-
-# 49. Comments
-
-Comments should explain:
-
-```text
-why
-constraints
-non-obvious DOCX behavior
-format compatibility
-security assumptions
-```
-
-Do not comment obvious syntax.
-
-Where a workaround exists because of:
-
-```text
-Electron behavior
-DOCX XML behavior
-TypeScript 7 behavior
-```
-
-document the reason.
-
----
-
-# 50. README Requirements
-
-README should include:
-
-```text
-What the project does
-Current status
-Prerequisites
-Development
-Build
-Filesystem layout
-MVP workflow
-Architecture overview
-Privacy/local-first behavior
-```
-
-Explicitly document:
-
-```text
-Configuration:
-~/.config/fillforge
-
-Application data:
-~/.local/fillforge
-```
-
-Explicitly document that no SQL database is used.
-
----
-
-# 51. Privacy Model
-
-Default assumption:
-
-```text
-documents remain local
-```
-
-MVP should not upload anything automatically.
-
-Generating a prompt is local.
-
-Copying a prompt is local.
-
-Importing AI JSON is local.
-
-When direct AI integration is added later, the UI must make external transmission explicit.
-
-Do not silently introduce telemetry.
-
-Do not add analytics in MVP.
-
----
-
-# 52. Initial Implementation Order
-
-Implement in this order.
-
-## Phase 1 — Skeleton
-
-Create:
-
-```text
-pnpm workspace
-Electron
-React
-Vite
-TypeScript 7
-Biome
-test setup
-```
-
-Verify:
-
-```bash
-pnpm dev
-pnpm typecheck
-pnpm test
-pnpm build
-```
-
-all work.
-
-## Phase 2 — Filesystem foundation
-
-Implement:
-
-```text
-getAppPaths()
-directory initialization
-atomic writes
-template repository
-run repository
-schema validation
-```
-
-Add tests using temporary roots.
-
-## Phase 3 — DOCX engine
-
-Implement:
-
-```text
-DocumentRenderer
-DocxtemplaterRenderer
-placeholder inspection
-DOCX rendering
-```
-
-Add fixture DOCX integration tests.
-
-## Phase 4 — Template editor
-
-Implement:
-
-```text
-import DOCX
-detect placeholders
-edit field semantics
-save template.yaml
-binding editor
-```
-
-## Phase 5 — Prompt workflow
-
-Implement:
-
-```text
-prompt builder
-prompt preview
-copy prompt
-expected output preview
-```
-
-## Phase 6 — Extraction import
-
-Implement:
-
-```text
-paste JSON
-Markdown fence stripping
-Zod validation
-error display
-save extraction.json
-```
-
-## Phase 7 — Human review
-
-Implement:
-
-```text
-field review UI
-evidence display
-edit values
-validation
-review.json
-normalized.json
-```
-
-## Phase 8 — Rendering
-
-Implement:
-
-```text
-binding resolution
-transforms
-DOCX rendering
-output storage
-open/show output
-```
-
-## Phase 9 — Run history
-
-Implement:
-
-```text
-scan run directories
-recent runs
-open previous run
-view extraction/review/output
-```
-
-Do not jump ahead to Agent integration before these are functional.
-
----
-
-# 53. MVP Acceptance Test
-
-The MVP is successful when this exact scenario works:
-
-1. User launches the application.
-2. User imports `invoice-template.docx`.
-3. Application detects:
-
-```text
-invoice_number
-invoice_date
-seller_name
-total_amount
-```
-
-4. User configures field meanings.
-5. Application writes a readable `template.yaml`.
-6. User starts a run.
-7. User optionally attaches `invoice.jpg`.
-8. Application generates a prompt.
-9. User copies prompt.
-10. User opens an external multimodal AI.
-11. User sends prompt + `invoice.jpg`.
-12. AI returns JSON.
-13. User pastes JSON into FillForge.
-14. Application validates it.
-15. Application displays extracted values and evidence.
-16. User corrects one field.
-17. Original model value remains preserved.
-18. Corrected value is persisted separately.
-19. Application renders the DOCX deterministically.
-20. User opens the result.
-21. Closing and reopening the application preserves all template/run information using ordinary
-    files only.
-
-No database may be required for this test.
-
----
-
-# 54. Architecture Invariants
-
-These are more important than implementation details.
-
-Never violate them casually.
-
-```text
-1. Filesystem is canonical storage.
-
-2. No SQL database.
-
-3. ~/.config/fillforge stores configuration.
-
-4. ~/.local/fillforge stores user data.
-
-5. AI produces structured data, not Word files.
-
-6. Original AI output is preserved.
-
-7. Human-reviewed values are separate.
-
-8. DOCX rendering is deterministic.
-
-9. Business fields are separate from DOCX placeholders.
-
-10. Domain logic is independent of Electron UI.
-
-11. Agent runtimes do not own business logic.
-
-12. Core operations are naturally tool-shaped.
-
-13. Renderer has no unrestricted filesystem/Node access.
-
-14. Persisted structures are versioned.
-
-15. A run should be inspectable by opening its directory in a file manager/text editor.
-```
-
----
-
-# 55. Decisions the Agent May Make Independently
-
-The coding agent may choose reasonable implementations for:
-
-```text
-component library
-CSS approach
-test runner
-Electron/Vite integration package
-exact IPC helper structure
-ULID implementation
-small UI details
-error presentation
-```
-
-provided they obey all architecture constraints above.
-
-Do not stop to ask for approval over trivial implementation choices.
-
-Prefer making a sensible decision, implementing it cleanly, and documenting it.
-
----
-
-# 56. Decisions Requiring Explicit Approval
-
-Do NOT independently introduce:
-
-```text
-database
-cloud backend
-authentication
-telemetry
-direct AI provider dependency
-agent runtime
-MCP runtime
-Rust sidecar
-Go service
-Python process
-LibreOffice dependency
-new persistence root
-Windows AppData storage
-macOS Application Support storage
-```
-
-These require explicit product decisions.
-
----
-
-# 57. First Task
-
-Start implementation now.
-
-The first development goal is:
-
-```text
-A runnable Electron + React + TypeScript 7 application
-with the filesystem foundation and one end-to-end
-DOCX placeholder replacement fixture.
-```
-
-Proceed as follows:
-
-```text
-1. Initialize pnpm workspace.
-2. Create Electron desktop application.
-3. Configure TypeScript 7.
-4. Configure Biome.
-5. Configure tests.
-6. Implement ~/.config/fillforge and ~/.local/fillforge path resolution.
-7. Implement filesystem directory initialization.
-8. Define initial Zod domain schemas.
-9. Add Docxtemplater + PizZip.
-10. Create a fixture DOCX.
-11. Implement placeholder inspection.
-12. Implement deterministic replacement.
-13. Add automated integration test.
-14. Build minimal UI to import a DOCX and display detected placeholders.
-15. Run typecheck/tests/build and fix all failures.
-16. Update README with actual working commands and architecture.
-```
-
-Do not begin Agent integration.
-
-Do not add a database.
-
-Do not add speculative infrastructure.
-
-Get this vertical slice working first:
-
-```text
-DOCX
- ↓
-placeholder inspection
- ↓
-field display
- ↓
-structured values
- ↓
-DOCX render
-```
-
-Once that works cleanly, continue toward the complete MVP workflow described above.
-
----
-
-# 58. Completion Discipline
-
-After each meaningful implementation stage:
-
-1. Run type checking.
-2. Run tests.
-3. Run formatting/lint checks.
-4. Build the application when relevant.
-5. Fix actual failures before moving on.
-6. Keep README synchronized with reality.
-
-Do not claim functionality exists unless it is implemented and tested.
-
-Do not leave critical paths as placeholder TODOs while moving to later phases.
-
-Favor a small working vertical slice over many unfinished abstractions.
-
-The immediate priority is a functional local-first desktop product, not a framework.
+The implementation status in Section 2 is the baseline for this specification. If code and this
+document disagree, the mismatch MUST be resolved by either correcting the implementation or
+recording and approving a specification change; it MUST NOT remain ambiguous.
