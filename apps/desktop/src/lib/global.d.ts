@@ -1,4 +1,4 @@
-import type { DocufillApi } from "./ipc-protocol";
+import type { DocufillApi } from './ipc-protocol';
 
 declare global {
   interface Window {

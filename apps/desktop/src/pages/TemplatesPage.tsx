@@ -1,8 +1,8 @@
-import type { TemplateSummary } from "@docufill/schema";
-import { useState } from "react";
-import type { Navigate } from "../App";
-import { ErrorBanner, Section } from "../components/ui";
-import { extractError, useAsyncData } from "../hooks/useAsyncData";
+import type { TemplateSummary } from '@docufill/schema';
+import { useState } from 'react';
+import type { Navigate } from '../App';
+import { ErrorBanner, Section } from '../components/ui';
+import { extractError, useAsyncData } from '../hooks/useAsyncData';
 
 export function TemplatesPage({ navigate }: { navigate: Navigate }) {
   const templates = useAsyncData(() => window.docufill.templates.list(), []);
@@ -34,7 +34,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
           >
             Import DOCX
           </button>
-          <button onClick={() => navigate({ page: "newRun" })}>New run</button>
+          <button onClick={() => navigate({ page: 'newRun' })}>New run</button>
         </div>
       </header>
 
@@ -57,18 +57,18 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
               <tr key={template.id}>
                 <td>{template.name}</td>
                 <td className="muted">{template.id}</td>
-                <td className="muted">{template.description ?? "—"}</td>
-                <td>{template.hasDocument ? "✓" : "missing"}</td>
+                <td className="muted">{template.description ?? '—'}</td>
+                <td>{template.hasDocument ? '✓' : 'missing'}</td>
                 <td className="actions-cell">
                   <button
                     className="link"
-                    onClick={() => navigate({ page: "templateEditor", templateId: template.id })}
+                    onClick={() => navigate({ page: 'templateEditor', templateId: template.id })}
                   >
                     Open
                   </button>
                   <button
                     className="link"
-                    onClick={() => navigate({ page: "newRun", templateId: template.id })}
+                    onClick={() => navigate({ page: 'newRun', templateId: template.id })}
                   >
                     New run
                   </button>
@@ -85,7 +85,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Delete template "${template.id}"? This removes its directory.`,
+                          `Delete template "${template.id}"? This removes its directory.`
                         )
                       ) {
                         void run(() => window.docufill.templates.delete(template.id));

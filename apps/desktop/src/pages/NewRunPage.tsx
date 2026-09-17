@@ -1,18 +1,18 @@
-import type { TemplateSummary } from "@docufill/schema";
-import { useState } from "react";
-import type { Navigate } from "../App";
-import { ErrorBanner, Section } from "../components/ui";
-import { extractError, useAsyncData } from "../hooks/useAsyncData";
+import type { TemplateSummary } from '@docufill/schema';
+import { useState } from 'react';
+import type { Navigate } from '../App';
+import { ErrorBanner, Section } from '../components/ui';
+import { extractError, useAsyncData } from '../hooks/useAsyncData';
 
 export function NewRunPage({
   initialTemplateId,
-  navigate,
+  navigate
 }: {
   initialTemplateId?: string;
   navigate: Navigate;
 }) {
   const templates = useAsyncData(() => window.docufill.templates.list(), []);
-  const [selected, setSelected] = useState(initialTemplateId ?? "");
+  const [selected, setSelected] = useState(initialTemplateId ?? '');
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -25,9 +25,9 @@ export function NewRunPage({
     try {
       const run = await window.docufill.runs.create({
         templateId: selected,
-        attachmentPaths: [],
+        attachmentPaths: []
       });
-      navigate({ page: "run", runId: run.id });
+      navigate({ page: 'run', runId: run.id });
     } catch (cause) {
       setError(extractError(cause));
     } finally {
@@ -36,7 +36,7 @@ export function NewRunPage({
   }
 
   const templatesWithoutDocument = (templates.data ?? []).filter(
-    (template: TemplateSummary) => template.hasDocument,
+    (template: TemplateSummary) => template.hasDocument
   );
 
   return (
@@ -79,7 +79,7 @@ export function NewRunPage({
           never modified.
         </p>
         <button className="primary" disabled={!selected || busy} onClick={() => void createRun()}>
-          {busy ? "Creating…" : "Create run"}
+          {busy ? 'Creating…' : 'Create run'}
         </button>
       </Section>
     </div>

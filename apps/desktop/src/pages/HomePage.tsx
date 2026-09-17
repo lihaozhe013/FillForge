@@ -1,8 +1,8 @@
-import type { RunSummary, TemplateSummary } from "@docufill/schema";
-import { useState } from "react";
-import type { Navigate } from "../App";
-import { ErrorBanner, Section } from "../components/ui";
-import { extractError, useAsyncData } from "../hooks/useAsyncData";
+import type { RunSummary, TemplateSummary } from '@docufill/schema';
+import { useState } from 'react';
+import type { Navigate } from '../App';
+import { ErrorBanner, Section } from '../components/ui';
+import { extractError, useAsyncData } from '../hooks/useAsyncData';
 
 export function HomePage({ navigate }: { navigate: Navigate }) {
   const templates = useAsyncData(() => window.docufill.templates.list(), []);
@@ -27,7 +27,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
       <header className="page-header">
         <h1>Home</h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: "templates" })}>Templates</button>
+          <button onClick={() => navigate({ page: 'templates' })}>Templates</button>
           <button className="primary" onClick={() => void importTemplate()}>
             Import template
           </button>
@@ -46,8 +46,8 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                   className="link"
                   onClick={() =>
                     navigate({
-                      page: "templateEditor",
-                      templateId: template.id,
+                      page: 'templateEditor',
+                      templateId: template.id
                     })
                   }
                 >
@@ -65,7 +65,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
         <Section
           title="Recent runs"
           actions={
-            <button className="link" onClick={() => navigate({ page: "runs" })}>
+            <button className="link" onClick={() => navigate({ page: 'runs' })}>
               view all
             </button>
           }
@@ -74,11 +74,11 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
           <ul className="list">
             {recentRuns.map((run) => (
               <li key={run.id}>
-                <button className="link" onClick={() => navigate({ page: "run", runId: run.id })}>
+                <button className="link" onClick={() => navigate({ page: 'run', runId: run.id })}>
                   {run.id}
                 </button>
                 <span className="muted">
-                  {" "}
+                  {' '}
                   · {run.templateId} · {new Date(run.createdAt).toLocaleString()}
                 </span>
               </li>

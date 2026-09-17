@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
-import type { AppErrorDtoLike } from "../lib/ipc-protocol";
+import { useCallback, useEffect, useState } from 'react';
+import type { AppErrorDtoLike } from '../lib/ipc-protocol';
 
 export function extractError(error: unknown): AppErrorDtoLike {
-  if (error && typeof error === "object" && "code" in error) {
+  if (error && typeof error === 'object' && 'code' in error) {
     const candidate = error as AppErrorDtoLike & { details?: unknown };
     return {
       code: candidate.code,
       message: candidate.message,
-      ...(candidate.details === undefined ? {} : { details: candidate.details }),
+      ...(candidate.details === undefined ? {} : { details: candidate.details })
     };
   }
   return {
-    code: "internal_error",
-    message: error instanceof Error ? error.message : String(error),
+    code: 'internal_error',
+    message: error instanceof Error ? error.message : String(error)
   };
 }
 
@@ -22,7 +22,7 @@ export function extractError(error: unknown): AppErrorDtoLike {
  */
 export function useAsyncData<T>(
   loader: () => Promise<T>,
-  _dependencies: unknown[],
+  _dependencies: unknown[]
 ): { data: T | null; error: AppErrorDtoLike | null; loading: boolean; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<AppErrorDtoLike | null>(null);

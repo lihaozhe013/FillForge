@@ -1,13 +1,13 @@
-import path from "node:path";
-import { copyFile, pathExists, toAppErrorDto, ValidationError } from "@docufill/core";
-import { buildExtractionPrompt } from "@docufill/extraction";
-import { mediaTypeForFilename } from "@docufill/runs";
-import { BrowserWindow, dialog, ipcMain, shell } from "electron";
-import type { z } from "zod";
-import type { AppErrorDtoLike, IpcResult } from "../../src/lib/ipc-protocol";
-import { IPC } from "../../src/lib/ipc-protocol";
-import { logAppEvent, logDebug } from "../logger";
-import type { AppServices } from "../services";
+import path from 'node:path';
+import { copyFile, pathExists, toAppErrorDto, ValidationError } from '@docufill/core';
+import { buildExtractionPrompt } from '@docufill/extraction';
+import { mediaTypeForFilename } from '@docufill/runs';
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import type { z } from 'zod';
+import type { AppErrorDtoLike, IpcResult } from '../../src/lib/ipc-protocol';
+import { IPC } from '../../src/lib/ipc-protocol';
+import { logAppEvent, logDebug } from '../logger';
+import type { AppServices } from '../services';
 import {
   emptyPayloadSchema,
   runsCreateSchema,
@@ -17,12 +17,12 @@ import {
   systemPathSchema,
   templatesLoadSchema,
   templatesPromptPreviewSchema,
-  templatesSaveSchemaSchema,
-} from "./schemas";
+  templatesSaveSchemaSchema
+} from './schemas';
 
 function isInside(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 function focusedWindow(): BrowserWindow | undefined {
@@ -43,20 +43,20 @@ async function showOpenDialog(options: Electron.OpenDialogOptions): Promise<stri
 function handle<T>(
   channel: string,
   schema: z.ZodType<T>,
-  fn: (payload: T) => Promise<unknown>,
+  fn: (payload: T) => Promise<unknown>
 ): void {
   ipcMain.handle(channel, async (_event, rawPayload): Promise<IpcResult<unknown>> => {
     try {
       const parsed = schema.safeParse(rawPayload);
       if (!parsed.success) {
-        throw new ValidationError("Invalid request payload.", parsed.error.issues);
+        throw new ValidationError('Invalid request payload.', parsed.error.issues);
       }
       const data = await fn(parsed.data);
       return { ok: true, data: data ?? null };
     } catch (error) {
       const dto: AppErrorDtoLike = toAppErrorDto(error);
-      logAppEvent("error", `${channel} failed: ${dto.code} ${dto.message}`);
-      logDebug("ipc", `${channel} failed: ${dto.code} ${dto.message}`);
+      logAppEvent('error', `${channel} failed: ${dto.code} ${dto.message}`);
+      logDebug('ipc', `${channel} failed: ${dto.code} ${dto.message}`);
       return { ok: false, error: dto };
     }
   });
@@ -64,7 +64,7 @@ function handle<T>(
 
 async function requireExistingFile(filePath: string): Promise<void> {
   if (!(await pathExists(filePath))) {
-    throw new ValidationError("File not found.", { path: filePath });
+    throw new ValidationError('File not found.', { path: filePath });
   }
 }
 
@@ -75,9 +75,9 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.templatesImport, emptyPayloadSchema, async () => {
     const filePaths = await showOpenDialog({
-      title: "Import DOCX template",
-      filters: [{ name: "Word Documents", extensions: ["docx"] }],
-      properties: ["openFile"],
+      title: 'Import DOCX template',
+      filters: [{ name: 'Word Documents', extensions: ['docx'] }],
+      properties: ['openFile']
     });
     if (!filePaths) {
       return null;
@@ -95,11 +95,11 @@ export function registerIpcHandlers(services: AppServices): void {
   handle(IPC.templatesLoad, templatesLoadSchema, ({ id }) => templateService.loadTemplate(id));
 
   handle(IPC.templatesSaveSchema, templatesSaveSchemaSchema, ({ id, schema }) =>
-    templateService.saveSchema(id, schema).then(() => null),
+    templateService.saveSchema(id, schema).then(() => null)
   );
 
   handle(IPC.templatesInspect, templatesLoadSchema, ({ id }) =>
-    templateService.inspectTemplate(id),
+    templateService.inspectTemplate(id)
   );
 
   handle(IPC.templatesDuplicate, templatesLoadSchema, async ({ id }) => {
@@ -109,7 +109,7 @@ export function registerIpcHandlers(services: AppServices): void {
   });
 
   handle(IPC.templatesDelete, templatesLoadSchema, ({ id }) =>
-    templateService.deleteTemplate(id).then(() => null),
+    templateService.deleteTemplate(id).then(() => null)
   );
 
   handle(IPC.templatesPromptPreview, templatesPromptPreviewSchema, async ({ id }) => {
@@ -128,9 +128,9 @@ export function registerIpcHandlers(services: AppServices): void {
       attachments: attachmentPaths.map((filePath) => ({
         path: filePath,
         originalFilename: path.basename(filePath),
-        mediaType: mediaTypeForFilename(filePath),
-      })),
-    }),
+        mediaType: mediaTypeForFilename(filePath)
+      }))
+    })
   );
 
   handle(IPC.runsList, emptyPayloadSchema, () => runService.listRuns());
@@ -155,14 +155,14 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.runsAttachFiles, runsLoadSchema, async ({ id }) => {
     const filePaths = await showOpenDialog({
-      title: "Attach source material",
+      title: 'Attach source material',
       filters: [
         {
-          name: "Evidence",
-          extensions: ["jpg", "jpeg", "png", "webp", "gif", "pdf", "txt", "md"],
-        },
+          name: 'Evidence',
+          extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'txt', 'md']
+        }
       ],
-      properties: ["openFile", "multiSelections"],
+      properties: ['openFile', 'multiSelections']
     });
     if (!filePaths) {
       return null;
@@ -177,8 +177,8 @@ export function registerIpcHandlers(services: AppServices): void {
   handle(IPC.systemOpenPath, systemPathSchema, async ({ path: target }) => {
     await requireExistingFile(target);
     if (!isInside(paths.dataDir, target)) {
-      throw new ValidationError("Only files inside the Docufill data directory can be opened.", {
-        path: target,
+      throw new ValidationError('Only files inside the Docufill data directory can be opened.', {
+        path: target
       });
     }
     return shell.openPath(target);
@@ -186,8 +186,8 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.systemShowItemInFolder, systemPathSchema, async ({ path: target }) => {
     if (!isInside(paths.dataDir, target)) {
-      throw new ValidationError("Only files inside the Docufill data directory can be revealed.", {
-        path: target,
+      throw new ValidationError('Only files inside the Docufill data directory can be revealed.', {
+        path: target
       });
     }
     shell.showItemInFolder(target);
@@ -197,8 +197,8 @@ export function registerIpcHandlers(services: AppServices): void {
   handle(IPC.systemExportCopy, systemPathSchema, async ({ path: source }) => {
     await requireExistingFile(source);
     if (!isInside(paths.dataDir, source)) {
-      throw new ValidationError("Only files inside the Docufill data directory can be exported.", {
-        path: source,
+      throw new ValidationError('Only files inside the Docufill data directory can be exported.', {
+        path: source
       });
     }
     const window = focusedWindow();

@@ -16,8 +16,7 @@ fields:
 
     extraction:
       instruction: >
-        找到明确标记为“发票号码”的值。
-        不要将“发票代码”作为发票号码。
+        找到明确标记为“发票号码”的值。 不要将“发票代码”作为发票号码。
 
     normalization:
       trim: true
@@ -47,8 +46,7 @@ fields:
 
     extraction:
       instruction: >
-        从销售方区域提取企业名称。
-        不要返回购买方名称。
+        从销售方区域提取企业名称。 不要返回购买方名称。
 
   total_amount:
     label: 价税合计
@@ -58,8 +56,7 @@ fields:
 
     extraction:
       instruction: >
-        提取价税合计的小写金额。
-        不要返回税额或未税金额。
+        提取价税合计的小写金额。 不要返回税额或未税金额。
 
 bindings:
   invoice_number:

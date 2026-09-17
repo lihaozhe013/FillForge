@@ -1,6 +1,6 @@
-import { ValidationError } from "@docufill/core";
-import { type ExtractionResult, extractionResultSchema } from "@docufill/schema";
-import { ExtractionParseError } from "./errors.ts";
+import { ValidationError } from '@docufill/core';
+import { type ExtractionResult, extractionResultSchema } from '@docufill/schema';
+import { ExtractionParseError } from './errors.ts';
 
 /**
  * Strip an obvious Markdown code fence such as:
@@ -15,14 +15,14 @@ import { ExtractionParseError } from "./errors.ts";
  */
 export function stripMarkdownFences(raw: string): string {
   const text = raw.trim();
-  if (!text.startsWith("```")) {
+  if (!text.startsWith('```')) {
     return text;
   }
-  const openingEnd = text.indexOf("\n");
+  const openingEnd = text.indexOf('\n');
   if (openingEnd < 0) {
     return text;
   }
-  const closingStart = text.lastIndexOf("```");
+  const closingStart = text.lastIndexOf('```');
   if (closingStart <= openingEnd) {
     return text;
   }
@@ -37,14 +37,14 @@ export function parseExtractionJson(raw: string): unknown {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new ExtractionParseError(`The pasted extraction result is not valid JSON: ${message}`, {
-      cause: error,
+      cause: error
     });
   }
   const result = extractionResultSchema.safeParse(parsed);
   if (!result.success) {
     throw new ValidationError(
-      "The extraction result does not match the expected structure (fields need value, status, evidence).",
-      result.error.issues,
+      'The extraction result does not match the expected structure (fields need value, status, evidence).',
+      result.error.issues
     );
   }
   return result.data;

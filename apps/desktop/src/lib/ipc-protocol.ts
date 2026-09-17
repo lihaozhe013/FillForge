@@ -1,5 +1,5 @@
-import type { ExtractionIssue } from "@docufill/extraction";
-import type { RenderedArtifact } from "@docufill/runs";
+import type { ExtractionIssue } from '@docufill/extraction';
+import type { RenderedArtifact } from '@docufill/runs';
 import type {
   AttachmentMetadata,
   ExtractionResult,
@@ -8,8 +8,8 @@ import type {
   RunMetadata,
   RunSummary,
   TemplateSchema,
-  TemplateSummary,
-} from "@docufill/schema";
+  TemplateSummary
+} from '@docufill/schema';
 
 export interface PromptPreview {
   prompt: string;
@@ -17,28 +17,28 @@ export interface PromptPreview {
 }
 
 export const IPC = {
-  templatesList: "templates:list",
-  templatesImport: "templates:import",
-  templatesLoad: "templates:load",
-  templatesSaveSchema: "templates:update-schema",
-  templatesInspect: "templates:inspect",
-  templatesDuplicate: "templates:duplicate",
-  templatesDelete: "templates:delete",
-  templatesPromptPreview: "templates:prompt-preview",
+  templatesList: 'templates:list',
+  templatesImport: 'templates:import',
+  templatesLoad: 'templates:load',
+  templatesSaveSchema: 'templates:update-schema',
+  templatesInspect: 'templates:inspect',
+  templatesDuplicate: 'templates:duplicate',
+  templatesDelete: 'templates:delete',
+  templatesPromptPreview: 'templates:prompt-preview',
 
-  runsCreate: "runs:create",
-  runsList: "runs:list",
-  runsLoad: "runs:load",
-  runsGeneratePrompt: "runs:generate-prompt",
-  runsImportExtraction: "runs:import-extraction",
-  runsSaveReview: "runs:save-review",
-  runsNormalize: "runs:normalize",
-  runsRender: "runs:render",
-  runsAttachFiles: "runs:attach-files",
+  runsCreate: 'runs:create',
+  runsList: 'runs:list',
+  runsLoad: 'runs:load',
+  runsGeneratePrompt: 'runs:generate-prompt',
+  runsImportExtraction: 'runs:import-extraction',
+  runsSaveReview: 'runs:save-review',
+  runsNormalize: 'runs:normalize',
+  runsRender: 'runs:render',
+  runsAttachFiles: 'runs:attach-files',
 
-  systemOpenPath: "system:open-path",
-  systemShowItemInFolder: "system:show-item-in-folder",
-  systemExportCopy: "system:export-copy",
+  systemOpenPath: 'system:open-path',
+  systemShowItemInFolder: 'system:show-item-in-folder',
+  systemExportCopy: 'system:export-copy'
 } as const;
 
 export interface RunDetailsDto {

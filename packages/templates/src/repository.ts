@@ -1,5 +1,5 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   AppError,
   copyFileWithCollisionAvoidance,
@@ -12,18 +12,18 @@ import {
   slugifyId,
   TemplateNotFoundError,
   UnsupportedSchemaVersionError,
-  writeYamlFileAtomic,
-} from "@docufill/core";
+  writeYamlFileAtomic
+} from '@docufill/core';
 import {
   type CreateTemplateInput,
   TEMPLATE_SCHEMA_VERSION,
   type TemplateSchema,
   type TemplateSummary,
-  templateSchema,
-} from "@docufill/schema";
+  templateSchema
+} from '@docufill/schema';
 
-const TEMPLATE_CONFIG_FILE = "template.yaml";
-const TEMPLATE_DOCUMENT_FILE = "template.docx";
+const TEMPLATE_CONFIG_FILE = 'template.yaml';
+const TEMPLATE_DOCUMENT_FILE = 'template.docx';
 
 export interface TemplateRepository {
   list(): Promise<TemplateSummary[]>;
@@ -37,15 +37,15 @@ export interface TemplateRepository {
 
 export function parseTemplateConfig(raw: unknown, templateId: string): TemplateSchema {
   if (
-    typeof raw === "object" &&
+    typeof raw === 'object' &&
     raw !== null &&
-    "schema_version" in raw &&
+    'schema_version' in raw &&
     (raw as { schema_version?: unknown }).schema_version !== TEMPLATE_SCHEMA_VERSION
   ) {
     throw new UnsupportedSchemaVersionError(
-      "template.yaml",
+      'template.yaml',
       (raw as { schema_version?: unknown }).schema_version,
-      TEMPLATE_SCHEMA_VERSION,
+      TEMPLATE_SCHEMA_VERSION
     );
   }
   const result = templateSchema.safeParse(raw);
@@ -80,7 +80,7 @@ export class FileTemplateRepository implements TemplateRepository {
           id: template.id,
           name: template.name,
           description: template.description,
-          hasDocument: await pathExists(this.documentPath(id)),
+          hasDocument: await pathExists(this.documentPath(id))
         });
       } catch (error) {
         // A broken template directory must not hide the rest of the list.
@@ -92,7 +92,7 @@ export class FileTemplateRepository implements TemplateRepository {
             id,
             name: id,
             description: `Unreadable template configuration: ${error.code}`,
-            hasDocument: await pathExists(this.documentPath(id)),
+            hasDocument: await pathExists(this.documentPath(id))
           });
           continue;
         }
@@ -118,7 +118,7 @@ export class FileTemplateRepository implements TemplateRepository {
     const id = input.id ?? slugifyId(input.name);
     const dir = this.templateDir(id);
     if (await pathExists(dir)) {
-      throw new AppError("template_already_exists", `Template "${id}" already exists.`);
+      throw new AppError('template_already_exists', `Template "${id}" already exists.`);
     }
     await fs.mkdir(dir, { recursive: true });
     await copyFileWithCollisionAvoidance(input.documentPath, dir, TEMPLATE_DOCUMENT_FILE);
@@ -129,7 +129,7 @@ export class FileTemplateRepository implements TemplateRepository {
       ...(input.description === undefined ? {} : { description: input.description }),
       document: { file: TEMPLATE_DOCUMENT_FILE },
       fields: {},
-      bindings: {},
+      bindings: {}
     };
     await this.saveSchema(id, schema);
     return schema;
@@ -149,13 +149,13 @@ export class FileTemplateRepository implements TemplateRepository {
     const sourceDir = this.templateDir(id);
     const targetDir = this.templateDir(targetId);
     if (await pathExists(targetDir)) {
-      throw new AppError("template_already_exists", `Template "${targetId}" already exists.`);
+      throw new AppError('template_already_exists', `Template "${targetId}" already exists.`);
     }
     await fs.cp(sourceDir, targetDir, { recursive: true });
     const copy: TemplateSchema = {
       ...source,
       id: targetId,
-      name: `${source.name} (copy)`,
+      name: `${source.name} (copy)`
     };
     await writeYamlFileAtomic(this.configFile(targetId), copy);
     return copy;
@@ -174,8 +174,8 @@ export class FileTemplateRepository implements TemplateRepository {
     const documentPath = path.join(this.templateDir(id), template.document.file);
     if (!(await pathExists(documentPath))) {
       throw new AppError(
-        "template_document_missing",
-        `The document file for template "${id}" is missing.`,
+        'template_document_missing',
+        `The document file for template "${id}" is missing.`
       );
     }
     return documentPath;

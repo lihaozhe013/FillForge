@@ -2,7 +2,8 @@
 
 ## 1. Project Overview
 
-Build a local-first desktop application for configuring, filling, reviewing, and rendering Microsoft Word `.docx` templates.
+Build a local-first desktop application for configuring, filling, reviewing, and rendering Microsoft
+Word `.docx` templates.
 
 The product is centered around this workflow:
 
@@ -28,16 +29,18 @@ deterministically render DOCX
 
 The first version MUST NOT require an integrated AI agent.
 
-The first version MUST be useful even when the user manually copies the generated prompt into ChatGPT, Claude, Gemini, or another multimodal model and pastes the resulting JSON back into the app.
+The first version MUST be useful even when the user manually copies the generated prompt into
+ChatGPT, Claude, Gemini, or another multimodal model and pastes the resulting JSON back into the
+app.
 
 The architecture MUST, however, make future integration with:
 
-* direct model APIs,
-* multimodal models,
-* MCP,
-* OpenAI Agents SDK,
-* Mastra,
-* other agent runtimes,
+- direct model APIs,
+- multimodal models,
+- MCP,
+- OpenAI Agents SDK,
+- Mastra,
+- other agent runtimes,
 
 straightforward without rewriting the domain model or document engine.
 
@@ -98,15 +101,17 @@ Electron 44.x      desktop runtime
 
 Node 26 is the required external development runtime.
 
-Note that Electron embeds its own Node runtime. Electron 44 currently embeds Node 24.x. Application code that executes inside Electron main/preload processes MUST therefore avoid depending on Node 26-only runtime APIs unless that code executes in an external Node process.
+Note that Electron embeds its own Node runtime. Electron 44 currently embeds Node 24.x. Application
+code that executes inside Electron main/preload processes MUST therefore avoid depending on Node
+26-only runtime APIs unless that code executes in an external Node process.
 
 Use Node 26 for:
 
-* pnpm scripts,
-* development tooling,
-* build scripts,
-* test runner where appropriate,
-* CLI utilities executed outside Electron.
+- pnpm scripts,
+- development tooling,
+- build scripts,
+- test runner where appropriate,
+- CLI utilities executed outside Electron.
 
 Electron main/preload code must remain compatible with Electron's bundled Node runtime.
 
@@ -114,10 +119,10 @@ Use pnpm only.
 
 Do NOT introduce:
 
-* Bun,
-* Yarn,
-* npm lockfiles,
-* Deno.
+- Bun,
+- Yarn,
+- npm lockfiles,
+- Deno.
 
 The repository must contain:
 
@@ -179,15 +184,15 @@ The filesystem layout itself is part of the product design.
 
 Advantages we explicitly want:
 
-* transparent storage,
-* easy backup,
-* easy copying,
-* easy debugging,
-* Git-friendly template configuration,
-* easy synchronization,
-* no hidden DB state,
-* agent/CLI friendliness,
-* straightforward future MCP exposure.
+- transparent storage,
+- easy backup,
+- easy copying,
+- easy debugging,
+- Git-friendly template configuration,
+- easy synchronization,
+- no hidden DB state,
+- agent/CLI friendliness,
+- straightforward future MCP exposure.
 
 If indexing eventually becomes necessary, an index may be added later as a disposable cache.
 
@@ -276,7 +281,7 @@ export function getAppPaths(): AppPaths;
 Use:
 
 ```ts
-os.homedir()
+os.homedir();
 ```
 
 for resolving the user's home directory.
@@ -333,10 +338,10 @@ Core packages
 Do NOT expose:
 
 ```ts
-require
-process
-fs
-child_process
+require;
+process;
+fs;
+child_process;
 ```
 
 directly to renderer code.
@@ -346,12 +351,12 @@ Renderer UI should call typed application operations.
 Example:
 
 ```ts
-window.docufill.templates.list()
-window.docufill.templates.import()
-window.docufill.templates.updateSchema()
-window.docufill.runs.create()
-window.docufill.runs.importExtraction()
-window.docufill.runs.render()
+window.docufill.templates.list();
+window.docufill.templates.import();
+window.docufill.templates.updateSchema();
+window.docufill.runs.create();
+window.docufill.runs.importExtraction();
+window.docufill.runs.render();
 ```
 
 IPC payloads must be validated with Zod at process boundaries.
@@ -500,9 +505,11 @@ For Node/Electron packages:
 
 Renderer packages should not accidentally inherit Node globals.
 
-Avoid tooling that requires TypeScript's old programmatic compiler API unless verified compatible with TypeScript 7.
+Avoid tooling that requires TypeScript's old programmatic compiler API unless verified compatible
+with TypeScript 7.
 
-Prefer Biome for formatting and basic linting instead of making ESLint/typescript-eslint part of the critical path.
+Prefer Biome for formatting and basic linting instead of making ESLint/typescript-eslint part of the
+critical path.
 
 Required scripts should include:
 
@@ -625,8 +632,7 @@ fields:
 
     extraction:
       instruction: >
-        找到明确标记为“发票号码”的值。
-        不要将“发票代码”作为发票号码。
+        找到明确标记为“发票号码”的值。 不要将“发票代码”作为发票号码。
 
     normalization:
       trim: true
@@ -656,8 +662,7 @@ fields:
 
     extraction:
       instruction: >
-        从销售方区域提取企业名称。
-        不要返回购买方名称。
+        从销售方区域提取企业名称。 不要返回购买方名称。
 
   total_amount:
     label: 价税合计
@@ -667,8 +672,7 @@ fields:
 
     extraction:
       instruction: >
-        提取价税合计的小写金额。
-        不要返回税额或未税金额。
+        提取价税合计的小写金额。 不要返回税额或未税金额。
 
 bindings:
   invoice_number:
@@ -709,7 +713,7 @@ Do not silently change persisted file shapes.
 Future migrations should use explicit code:
 
 ```ts
-migrateTemplateV1ToV2()
+migrateTemplateV1ToV2();
 ```
 
 The application should reject unsupported newer schema versions with a clear error.
@@ -784,7 +788,8 @@ Do NOT parse DOCX placeholders using a naive regex over `word/document.xml`.
 
 Word may split visible text across XML runs.
 
-Prefer Docxtemplater's parser/inspection mechanisms or another DOCX-aware approach capable of handling run boundaries.
+Prefer Docxtemplater's parser/inspection mechanisms or another DOCX-aware approach capable of
+handling run boundaries.
 
 For each detected placeholder, show configuration fields:
 
@@ -840,14 +845,9 @@ export interface TemplateInspection {
 }
 
 export interface DocumentRenderer {
-  inspect(
-    document: Uint8Array,
-  ): Promise<TemplateInspection>;
+  inspect(document: Uint8Array): Promise<TemplateInspection>;
 
-  render(input: {
-    document: Uint8Array;
-    values: Record<string, unknown>;
-  }): Promise<Uint8Array>;
+  render(input: { document: Uint8Array; values: Record<string, unknown> }): Promise<Uint8Array>;
 }
 ```
 
@@ -1085,12 +1085,12 @@ Example:
 
 Users must be able to:
 
-* accept values,
-* edit values,
-* fill missing values,
-* clear values,
-* see evidence,
-* see validation errors.
+- accept values,
+- edit values,
+- fill missing values,
+- clear values,
+- see evidence,
+- see validation errors.
 
 Keep:
 
@@ -1223,10 +1223,7 @@ Provide an atomic write helper.
 Conceptually:
 
 ```ts
-await atomicWriteFile(
-  target,
-  JSON.stringify(value, null, 2),
-);
+await atomicWriteFile(target, JSON.stringify(value, null, 2));
 ```
 
 Do not implement application state through repeated mutation of one giant JSON file.
@@ -1266,10 +1263,7 @@ export interface TemplateRepository {
 
   create(input: CreateTemplateInput): Promise<Template>;
 
-  saveSchema(
-    id: string,
-    schema: TemplateSchema,
-  ): Promise<void>;
+  saveSchema(id: string, schema: TemplateSchema): Promise<void>;
 
   delete(id: string): Promise<void>;
 }
@@ -1312,7 +1306,7 @@ Example:
 
 ```ts
 await fs.readdir(paths.templatesDir, {
-  withFileTypes: true,
+  withFileTypes: true
 });
 ```
 
@@ -1355,9 +1349,7 @@ bindings:
 Implement a transform registry:
 
 ```ts
-export type BindingTransform = (
-  value: unknown,
-) => unknown;
+export type BindingTransform = (value: unknown) => unknown;
 ```
 
 Initial transforms may include:
@@ -1442,13 +1434,13 @@ through the application.
 Prefer:
 
 ```ts
-SomeSchema.parse(value)
+SomeSchema.parse(value);
 ```
 
 or:
 
 ```ts
-SomeSchema.safeParse(value)
+SomeSchema.safeParse(value);
 ```
 
 depending on context.
@@ -1712,7 +1704,8 @@ Leave clean seams instead.
 
 # 32. Future AI Integration Boundary
 
-Even though MVP does not invoke models directly, define an extraction interface that future providers can implement.
+Even though MVP does not invoke models directly, define an extraction interface that future
+providers can implement.
 
 Example:
 
@@ -1730,9 +1723,7 @@ export interface ExtractionRequest {
 }
 
 export interface Extractor {
-  extract(
-    request: ExtractionRequest,
-  ): Promise<ExtractionResult>;
+  extract(request: ExtractionRequest): Promise<ExtractionResult>;
 }
 ```
 
@@ -1943,23 +1934,14 @@ interface DocufillApi {
     list(): Promise<TemplateSummary[]>;
     import(): Promise<TemplateSummary | null>;
     load(id: string): Promise<Template>;
-    saveSchema(
-      id: string,
-      schema: TemplateSchema,
-    ): Promise<void>;
+    saveSchema(id: string, schema: TemplateSchema): Promise<void>;
   };
 
   runs: {
     create(input: CreateRunInput): Promise<Run>;
     load(id: string): Promise<Run>;
-    importExtraction(
-      id: string,
-      raw: string,
-    ): Promise<ExtractionResult>;
-    saveReview(
-      id: string,
-      review: ReviewedRecord,
-    ): Promise<void>;
+    importExtraction(id: string, raw: string): Promise<ExtractionResult>;
+    saveReview(id: string, review: ReviewedRecord): Promise<void>;
     render(id: string): Promise<RenderedArtifact>;
   };
 }
@@ -2101,7 +2083,8 @@ Have fixture `.docx` templates.
 
 Verify generated documents contain expected replacements.
 
-Where byte-for-byte comparison is inappropriate, inspect generated DOCX ZIP/XML content semantically.
+Where byte-for-byte comparison is inappropriate, inspect generated DOCX ZIP/XML content
+semantically.
 
 ## Filesystem repository
 
@@ -2303,21 +2286,21 @@ Use domain names consistently.
 Good:
 
 ```ts
-TemplateSchema
-FieldDefinition
-ExtractionResult
-ReviewedRecord
-TemplateBinding
+TemplateSchema;
+FieldDefinition;
+ExtractionResult;
+ReviewedRecord;
+TemplateBinding;
 ```
 
 Bad:
 
 ```ts
-DataManager
-Processor
-Helper
-CommonService
-Utils2
+DataManager;
+Processor;
+Helper;
+CommonService;
+Utils2;
 ```
 
 Do not create generic "utils" dumping grounds.
@@ -2568,7 +2551,8 @@ total_amount
 18. Corrected value is persisted separately.
 19. Application renders the DOCX deterministically.
 20. User opens the result.
-21. Closing and reopening the application preserves all template/run information using ordinary files only.
+21. Closing and reopening the application preserves all template/run information using ordinary
+    files only.
 
 No database may be required for this test.
 

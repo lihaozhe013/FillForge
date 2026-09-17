@@ -1,5 +1,5 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   atomicWriteFile,
   copyFileWithCollisionAvoidance,
@@ -11,8 +11,8 @@ import {
   readTextFile,
   UnsupportedSchemaVersionError,
   writeJsonFileAtomic,
-  writeTextFileAtomic,
-} from "@docufill/core";
+  writeTextFileAtomic
+} from '@docufill/core';
 import {
   type AttachmentMetadata,
   type ExtractionResult,
@@ -22,17 +22,17 @@ import {
   type RunArtifacts,
   type RunMetadata,
   type RunSummary,
-  runMetadataSchema,
-} from "@docufill/schema";
+  runMetadataSchema
+} from '@docufill/schema';
 
-const METADATA_FILE = "metadata.json";
-const PROMPT_FILE = "prompt.md";
-const EXTRACTION_FILE = "extraction.json";
-const REVIEW_FILE = "review.json";
-const NORMALIZED_FILE = "normalized.json";
-const INPUT_DIR = "input";
-const OUTPUT_DIR = "output";
-const LATEST_OUTPUT = "result.docx";
+const METADATA_FILE = 'metadata.json';
+const PROMPT_FILE = 'prompt.md';
+const EXTRACTION_FILE = 'extraction.json';
+const REVIEW_FILE = 'review.json';
+const NORMALIZED_FILE = 'normalized.json';
+const INPUT_DIR = 'input';
+const OUTPUT_DIR = 'output';
+const LATEST_OUTPUT = 'result.docx';
 
 export interface RunAttachmentInput {
   path: string;
@@ -70,23 +70,23 @@ export interface RunRepository {
   addAttachment(
     id: string,
     sourcePath: string,
-    originalFilename: string,
+    originalFilename: string
   ): Promise<AttachmentMetadata>;
 }
 
 export function mediaTypeForFilename(filename: string): string {
   const extension = path.extname(filename).toLowerCase();
   const known: Record<string, string> = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".webp": "image/webp",
-    ".gif": "image/gif",
-    ".pdf": "application/pdf",
-    ".txt": "text/plain",
-    ".md": "text/markdown",
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif',
+    '.pdf': 'application/pdf',
+    '.txt': 'text/plain',
+    '.md': 'text/markdown'
   };
-  return known[extension] ?? "application/octet-stream";
+  return known[extension] ?? 'application/octet-stream';
 }
 
 export class FileRunRepository implements RunRepository {
@@ -114,12 +114,12 @@ export class FileRunRepository implements RunRepository {
       const storedPath = await copyFileWithCollisionAvoidance(
         attachment.path,
         path.join(this.runDir(id), INPUT_DIR),
-        attachment.originalFilename,
+        attachment.originalFilename
       );
       attachments.push({
         filename: path.basename(storedPath),
         original_filename: attachment.originalFilename,
-        media_type: attachment.mediaType,
+        media_type: attachment.mediaType
       });
     }
 
@@ -130,7 +130,7 @@ export class FileRunRepository implements RunRepository {
       template_id: input.templateId,
       template_schema_version: input.templateSchemaVersion,
       prompt_version: input.promptVersion,
-      attachments,
+      attachments
     };
     await writeJsonFileAtomic(this.filePath(id, METADATA_FILE), metadata);
     return metadata;
@@ -143,15 +143,15 @@ export class FileRunRepository implements RunRepository {
     }
     const raw = await readJsonFile(file);
     if (
-      typeof raw === "object" &&
+      typeof raw === 'object' &&
       raw !== null &&
-      "schema_version" in raw &&
+      'schema_version' in raw &&
       (raw as { schema_version?: unknown }).schema_version !== RUN_SCHEMA_VERSION
     ) {
       throw new UnsupportedSchemaVersionError(
         METADATA_FILE,
         (raw as { schema_version?: unknown }).schema_version,
-        RUN_SCHEMA_VERSION,
+        RUN_SCHEMA_VERSION
       );
     }
     return runMetadataSchema.parse(raw);
@@ -167,7 +167,7 @@ export class FileRunRepository implements RunRepository {
           id: metadata.id,
           createdAt: metadata.created_at,
           templateId: metadata.template_id,
-          artifacts: await this.describeArtifacts(id),
+          artifacts: await this.describeArtifacts(id)
         });
       } catch {
         // Unreadable run directories are skipped; they stay on disk untouched.
@@ -183,7 +183,7 @@ export class FileRunRepository implements RunRepository {
       extraction: await exists(EXTRACTION_FILE),
       review: await exists(REVIEW_FILE),
       normalized: await exists(NORMALIZED_FILE),
-      output: (await this.listOutputs(id)).length > 0,
+      output: (await this.listOutputs(id)).length > 0
     };
   }
 
@@ -215,7 +215,7 @@ export class FileRunRepository implements RunRepository {
   async saveNormalized(id: string, values: Record<string, unknown>): Promise<void> {
     const record: NormalizedRecord = {
       schema_version: RUN_SCHEMA_VERSION,
-      values,
+      values
     };
     await writeJsonFileAtomic(this.filePath(id, NORMALIZED_FILE), record);
   }
@@ -239,7 +239,7 @@ export class FileRunRepository implements RunRepository {
       .map((match) => Number(match[1]))
       .sort((a, b) => a - b);
     const nextVersion = (versions.at(-1) ?? 0) + 1;
-    const filename = `result-${String(nextVersion).padStart(3, "0")}.docx`;
+    const filename = `result-${String(nextVersion).padStart(3, '0')}.docx`;
     const target = path.join(outputDir, filename);
     await atomicWriteFile(target, document);
     await atomicWriteFile(path.join(outputDir, LATEST_OUTPUT), document);
@@ -250,7 +250,7 @@ export class FileRunRepository implements RunRepository {
     const outputDir = path.join(this.runDir(id), OUTPUT_DIR);
     try {
       const entries = await fs.readdir(outputDir);
-      return entries.filter((name) => name.endsWith(".docx")).sort();
+      return entries.filter((name) => name.endsWith('.docx')).sort();
     } catch {
       return [];
     }
@@ -259,23 +259,23 @@ export class FileRunRepository implements RunRepository {
   async addAttachment(
     id: string,
     sourcePath: string,
-    originalFilename: string,
+    originalFilename: string
   ): Promise<AttachmentMetadata> {
     await this.load(id);
     const storedPath = await copyFileWithCollisionAvoidance(
       sourcePath,
       path.join(this.runDir(id), INPUT_DIR),
-      originalFilename,
+      originalFilename
     );
     const attachment: AttachmentMetadata = {
       filename: path.basename(storedPath),
       original_filename: originalFilename,
-      media_type: mediaTypeForFilename(originalFilename),
+      media_type: mediaTypeForFilename(originalFilename)
     };
     const metadata = await this.load(id);
     const updated: RunMetadata = {
       ...metadata,
-      attachments: [...metadata.attachments, attachment],
+      attachments: [...metadata.attachments, attachment]
     };
     await writeJsonFileAtomic(this.filePath(id, METADATA_FILE), updated);
     return attachment;

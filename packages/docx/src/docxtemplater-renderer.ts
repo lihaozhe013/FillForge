@@ -1,8 +1,8 @@
-import Docxtemplater from "docxtemplater";
-import PizZip from "pizzip";
-import { DocxRenderError } from "./errors.ts";
-import { describeDocxtemplaterError, inspectDocxPlaceholders } from "./inspector.ts";
-import type { DocumentRenderer, RenderInput, TemplateInspection } from "./renderer.ts";
+import Docxtemplater from 'docxtemplater';
+import PizZip from 'pizzip';
+import { DocxRenderError } from './errors.ts';
+import { describeDocxtemplaterError, inspectDocxPlaceholders } from './inspector.ts';
+import type { DocumentRenderer, RenderInput, TemplateInspection } from './renderer.ts';
 
 export class DocxtemplaterRenderer implements DocumentRenderer {
   async inspect(document: Uint8Array): Promise<TemplateInspection> {
@@ -17,7 +17,7 @@ export class DocxtemplaterRenderer implements DocumentRenderer {
         linebreaks: true,
         // Validation happens before rendering in the run service; this keeps
         // rendering deterministic instead of throwing on leftover tags.
-        nullGetter: () => "",
+        nullGetter: () => ''
       });
       doc.render(input.values);
       return new Uint8Array(doc.toBuffer());
@@ -25,7 +25,7 @@ export class DocxtemplaterRenderer implements DocumentRenderer {
       const { message, details } = describeDocxtemplaterError(error);
       throw new DocxRenderError(`DOCX rendering failed: ${message}`, {
         details,
-        cause: error,
+        cause: error
       });
     }
   }

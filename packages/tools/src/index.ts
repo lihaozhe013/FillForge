@@ -1,10 +1,10 @@
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { type AppContext, createContext } from "./context.ts";
-import { extractFields } from "./extract-fields.ts";
-import { inspectTemplate } from "./inspect-template.ts";
-import { renderDocument } from "./render-document.ts";
-import { validateFields } from "./validate-fields.ts";
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { type AppContext, createContext } from './context.ts';
+import { extractFields } from './extract-fields.ts';
+import { inspectTemplate } from './inspect-template.ts';
+import { renderDocument } from './render-document.ts';
+import { validateFields } from './validate-fields.ts';
 
 const HELP = `Docufill CLI
 
@@ -23,39 +23,39 @@ Environment:
 type Command = (context: AppContext, args: string[]) => Promise<string>;
 
 const commands: Record<string, Command> = {
-  "inspect-template": (context, args) => {
+  'inspect-template': (context, args) => {
     const [templateId] = args;
     if (!templateId) {
-      throw new Error("inspect-template requires a template id");
+      throw new Error('inspect-template requires a template id');
     }
     return inspectTemplate(context, templateId);
   },
-  "extract-fields": (context, args) => {
+  'extract-fields': (context, args) => {
     const [templateId] = args;
     if (!templateId) {
-      throw new Error("extract-fields requires a template id");
+      throw new Error('extract-fields requires a template id');
     }
     return extractFields(context, templateId);
   },
-  "validate-fields": (context, args) => {
+  'validate-fields': (context, args) => {
     const [templateId, file] = args;
     if (!templateId || !file) {
-      throw new Error("validate-fields requires a template id and a JSON file");
+      throw new Error('validate-fields requires a template id and a JSON file');
     }
     return validateFields(context, templateId, file, { normalize: true });
   },
-  "render-document": (context, args) => {
+  'render-document': (context, args) => {
     const [runId] = args;
     if (!runId) {
-      throw new Error("render-document requires a run id");
+      throw new Error('render-document requires a run id');
     }
     return renderDocument(context, runId);
-  },
+  }
 };
 
 export async function main(argv: string[]): Promise<string> {
   const [command, ...args] = argv;
-  if (!command || command === "help" || command === "--help") {
+  if (!command || command === 'help' || command === '--help') {
     return HELP;
   }
   const run = commands[command];

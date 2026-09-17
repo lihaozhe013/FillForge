@@ -1,7 +1,7 @@
-import { ensureAppDirectories, getAppPaths } from "@docufill/core";
-import { createDocxtemplaterRenderer, type DocumentRenderer } from "@docufill/docx";
-import { FileRunRepository, RunService } from "@docufill/runs";
-import { TemplateService } from "@docufill/templates";
+import { ensureAppDirectories, getAppPaths } from '@docufill/core';
+import { createDocxtemplaterRenderer, type DocumentRenderer } from '@docufill/docx';
+import { FileRunRepository, RunService } from '@docufill/runs';
+import { TemplateService } from '@docufill/templates';
 
 export interface AppContext {
   templateService: TemplateService;

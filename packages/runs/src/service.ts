@@ -1,14 +1,14 @@
-import path from "node:path";
-import { ValidationError } from "@docufill/core";
-import type { DocumentRenderer } from "@docufill/docx";
+import path from 'node:path';
+import { ValidationError } from '@docufill/core';
+import type { DocumentRenderer } from '@docufill/docx';
 import {
   buildExtractionPrompt,
   type ExtractionIssue,
   normalizeValues,
   parseExtractionResult,
   validateExtractionResult,
-  valueFailsFieldValidation,
-} from "@docufill/extraction";
+  valueFailsFieldValidation
+} from '@docufill/extraction';
 import {
   type AttachmentMetadata,
   type ExtractionResult,
@@ -16,11 +16,11 @@ import {
   type ReviewedRecord,
   type RunMetadata,
   type RunSummary,
-  type TemplateSchema,
-} from "@docufill/schema";
-import { resolveBindings, type TemplateService } from "@docufill/templates";
-import type { RenderedArtifact, RunAttachmentInput, RunRepository } from "./repository.ts";
-import { buildReviewRecord, getEffectiveValues } from "./review.ts";
+  type TemplateSchema
+} from '@docufill/schema';
+import { resolveBindings, type TemplateService } from '@docufill/templates';
+import type { RenderedArtifact, RunAttachmentInput, RunRepository } from './repository.ts';
+import { buildReviewRecord, getEffectiveValues } from './review.ts';
 
 export interface RunOutput {
   filename: string;
@@ -46,7 +46,7 @@ export class RunService {
   constructor(
     runRepository: RunRepository,
     templateService: TemplateService,
-    renderer: DocumentRenderer,
+    renderer: DocumentRenderer
   ) {
     this.runRepository = runRepository;
     this.templateService = templateService;
@@ -62,7 +62,7 @@ export class RunService {
       templateId: template.id,
       templateSchemaVersion: template.schema_version,
       promptVersion: PROMPT_VERSION,
-      attachments: input.attachments,
+      attachments: input.attachments
     });
   }
 
@@ -73,9 +73,9 @@ export class RunService {
       this.runRepository.readExtraction(runId),
       this.runRepository.readReview(runId),
       this.runRepository.readNormalized(runId),
-      this.runRepository.listOutputs(runId),
+      this.runRepository.listOutputs(runId)
     ]);
-    const outputDir = path.join(this.runRepository.runDir(runId), "output");
+    const outputDir = path.join(this.runRepository.runDir(runId), 'output');
     return {
       metadata,
       prompt,
@@ -84,8 +84,8 @@ export class RunService {
       normalized: normalized?.values ?? null,
       outputs: outputs.map((filename) => ({
         filename,
-        path: path.join(outputDir, filename),
-      })),
+        path: path.join(outputDir, filename)
+      }))
     };
   }
 
@@ -96,7 +96,7 @@ export class RunService {
   addAttachment(
     runId: string,
     sourcePath: string,
-    originalFilename: string,
+    originalFilename: string
   ): Promise<AttachmentMetadata> {
     return this.runRepository.addAttachment(runId, sourcePath, originalFilename);
   }
@@ -114,7 +114,7 @@ export class RunService {
 
   async importExtraction(
     runId: string,
-    raw: string,
+    raw: string
   ): Promise<{ result: ExtractionResult; issues: ExtractionIssue[] }> {
     const template = await this.loadRunTemplate(runId);
     const result = parseExtractionResult(raw);
@@ -136,8 +136,8 @@ export class RunService {
       if (Object.hasOwn(finalValues, key) && valueFailsFieldValidation(field, finalValues[key])) {
         issues.push({
           field: key,
-          code: "rule_violation",
-          message: `Field "${key}" violates its validation rules.`,
+          code: 'rule_violation',
+          message: `Field "${key}" violates its validation rules.`
         });
       }
     }
@@ -178,23 +178,23 @@ export class RunService {
       if (!Object.hasOwn(values, key)) {
         issues.push({
           field: key,
-          code: "required_value_missing",
-          message: `Required field "${key}" (${field.label}) has no reviewed value.`,
+          code: 'required_value_missing',
+          message: `Required field "${key}" (${field.label}) has no reviewed value.`
         });
         continue;
       }
       if (valueFailsFieldValidation(field, values[key])) {
         issues.push({
           field: key,
-          code: "rule_violation",
-          message: `Field "${key}" (${field.label}) violates its validation rules.`,
+          code: 'rule_violation',
+          message: `Field "${key}" (${field.label}) violates its validation rules.`
         });
       }
     }
     if (issues.length > 0) {
       throw new ValidationError(
-        "The run is not ready to render; review the flagged fields first.",
-        issues,
+        'The run is not ready to render; review the flagged fields first.',
+        issues
       );
     }
   }
@@ -207,8 +207,8 @@ export class RunService {
   private async requireExtraction(runId: string): Promise<ExtractionResult> {
     const extraction = await this.runRepository.readExtraction(runId);
     if (!extraction) {
-      throw new ValidationError("No extraction result has been imported for this run yet.", {
-        runId,
+      throw new ValidationError('No extraction result has been imported for this run yet.', {
+        runId
       });
     }
     return extraction;

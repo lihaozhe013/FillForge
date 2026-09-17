@@ -1,11 +1,11 @@
-import { readFileBinary } from "@docufill/core";
+import { readFileBinary } from '@docufill/core';
 import {
   type ExtractionIssue,
   normalizeValues,
   parseExtractionResult,
-  validateExtractionResult,
-} from "@docufill/extraction";
-import type { AppContext } from "./context.ts";
+  validateExtractionResult
+} from '@docufill/extraction';
+import type { AppContext } from './context.ts';
 
 export interface ValidateFieldsOptions {
   /** Also print the normalized business record after validation. */
@@ -20,7 +20,7 @@ export async function validateFields(
   context: AppContext,
   templateId: string,
   extractionJsonPath: string,
-  options: ValidateFieldsOptions = {},
+  options: ValidateFieldsOptions = {}
 ): Promise<string> {
   const template = await context.templateService.loadTemplate(templateId);
   const raw = await readFileBinary(extractionJsonPath);
@@ -29,21 +29,21 @@ export async function validateFields(
   const issues: ExtractionIssue[] = validateExtractionResult(result, template);
 
   if (issues.length === 0) {
-    const lines = ["OK: the extraction result satisfies the template configuration."];
+    const lines = ['OK: the extraction result satisfies the template configuration.'];
     if (options.normalize) {
       const values: Record<string, unknown> = {};
       for (const [key, extracted] of Object.entries(result)) {
         values[key] = extracted.value;
       }
       lines.push(
-        `Normalized values:\n${JSON.stringify(normalizeValues(values, template.fields), null, 2)}`,
+        `Normalized values:\n${JSON.stringify(normalizeValues(values, template.fields), null, 2)}`
       );
     }
-    return lines.join("\n");
+    return lines.join('\n');
   }
 
   return [
     `Found ${issues.length} issue(s):`,
-    ...issues.map((issue) => `  - [${issue.code}] ${issue.field}: ${issue.message}`),
-  ].join("\n");
+    ...issues.map((issue) => `  - [${issue.code}] ${issue.field}: ${issue.message}`)
+  ].join('\n');
 }

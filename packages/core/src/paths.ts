@@ -1,6 +1,6 @@
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 export interface AppPaths {
   home: string;
@@ -14,7 +14,7 @@ export interface AppPaths {
   logsDir: string;
 }
 
-export const APP_NAME = "docufill";
+export const APP_NAME = 'docufill';
 
 /**
  * Resolve canonical application paths under a given home directory.
@@ -22,18 +22,18 @@ export const APP_NAME = "docufill";
  * translate these into OS-specific application data directories.
  */
 export function resolveAppPaths(home: string): AppPaths {
-  const configDir = path.join(home, ".config", APP_NAME);
-  const dataDir = path.join(home, ".local", APP_NAME);
+  const configDir = path.join(home, '.config', APP_NAME);
+  const dataDir = path.join(home, '.local', APP_NAME);
   return {
     home,
     configDir,
-    configFile: path.join(configDir, "config.yaml"),
+    configFile: path.join(configDir, 'config.yaml'),
     dataDir,
-    templatesDir: path.join(dataDir, "templates"),
-    runsDir: path.join(dataDir, "runs"),
-    exportsDir: path.join(dataDir, "exports"),
-    cacheDir: path.join(dataDir, "cache"),
-    logsDir: path.join(dataDir, "logs"),
+    templatesDir: path.join(dataDir, 'templates'),
+    runsDir: path.join(dataDir, 'runs'),
+    exportsDir: path.join(dataDir, 'exports'),
+    cacheDir: path.join(dataDir, 'cache'),
+    logsDir: path.join(dataDir, 'logs')
   };
 }
 
@@ -58,7 +58,7 @@ export async function ensureAppDirectories(paths: AppPaths): Promise<void> {
       paths.runsDir,
       paths.exportsDir,
       paths.cacheDir,
-      paths.logsDir,
-    ].map((dir) => fs.mkdir(dir, { recursive: true })),
+      paths.logsDir
+    ].map((dir) => fs.mkdir(dir, { recursive: true }))
   );
 }

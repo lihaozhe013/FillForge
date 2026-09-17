@@ -26,23 +26,23 @@ export class AppError extends Error {
     return {
       code: this.code,
       message: this.message,
-      ...(this.details === undefined ? {} : { details: this.details }),
+      ...(this.details === undefined ? {} : { details: this.details })
     };
   }
 }
 
 export class TemplateNotFoundError extends AppError {
   constructor(templateId: string, options: AppErrorOptions = {}) {
-    super("template_not_found", `Template "${templateId}" was not found.`, options);
+    super('template_not_found', `Template "${templateId}" was not found.`, options);
   }
 }
 
 export class InvalidTemplateSchemaError extends AppError {
   constructor(templateId: string, issues: unknown, options: AppErrorOptions = {}) {
     super(
-      "invalid_template_schema",
+      'invalid_template_schema',
       `Template "${templateId}" has an invalid configuration schema.`,
-      { details: issues, ...options },
+      { details: issues, ...options }
     );
   }
 }
@@ -50,22 +50,22 @@ export class InvalidTemplateSchemaError extends AppError {
 export class UnsupportedSchemaVersionError extends AppError {
   constructor(kind: string, found: unknown, supported: number, options: AppErrorOptions = {}) {
     super(
-      "unsupported_schema_version",
+      'unsupported_schema_version',
       `${kind} uses schema version ${String(found)}, but this application only supports version ${supported}.`,
-      options,
+      options
     );
   }
 }
 
 export class ValidationError extends AppError {
   constructor(message: string, issues: unknown, options: AppErrorOptions = {}) {
-    super("validation_failed", message, { details: issues, ...options });
+    super('validation_failed', message, { details: issues, ...options });
   }
 }
 
 export class RunNotFoundError extends AppError {
   constructor(runId: string, options: AppErrorOptions = {}) {
-    super("run_not_found", `Run "${runId}" was not found.`, options);
+    super('run_not_found', `Run "${runId}" was not found.`, options);
   }
 }
 
@@ -75,12 +75,12 @@ export function toAppErrorDto(error: unknown): AppErrorDto {
   }
   if (error instanceof Error) {
     return {
-      code: "internal_error",
-      message: error.message,
+      code: 'internal_error',
+      message: error.message
     };
   }
   return {
-    code: "internal_error",
-    message: "An unexpected error occurred.",
+    code: 'internal_error',
+    message: 'An unexpected error occurred.'
   };
 }

@@ -1,8 +1,8 @@
-import { extractError } from "../hooks/useAsyncData";
+import { extractError } from '../hooks/useAsyncData';
 
 export function ErrorBanner({
   error,
-  onDismiss,
+  onDismiss
 }: {
   error: { code: string; message: string } | null;
   onDismiss?: () => void;
@@ -35,7 +35,7 @@ export function StatusBadge({ status }: { status: string }) {
 export function Section({
   title,
   children,
-  actions,
+  actions
 }: {
   title: string;
   children: React.ReactNode;

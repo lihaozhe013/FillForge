@@ -1,25 +1,25 @@
-import type { FieldDefinition, PlaceholderReport, TemplateSchema } from "@docufill/schema";
-import { useEffect, useMemo, useState } from "react";
-import type { Navigate } from "../App";
-import { ErrorBanner, Section } from "../components/ui";
-import { copyToClipboard, extractError, useAsyncData } from "../hooks/useAsyncData";
+import type { FieldDefinition, PlaceholderReport, TemplateSchema } from '@docufill/schema';
+import { useEffect, useMemo, useState } from 'react';
+import type { Navigate } from '../App';
+import { ErrorBanner, Section } from '../components/ui';
+import { copyToClipboard, extractError, useAsyncData } from '../hooks/useAsyncData';
 
-const FIELD_TYPES = ["string", "number", "date", "boolean"] as const;
+const FIELD_TYPES = ['string', 'number', 'date', 'boolean'] as const;
 const TRANSFORMS = [
-  "",
-  "identity",
-  "date_year",
-  "date_month",
-  "date_day",
-  "trim",
-  "uppercase",
-  "lowercase",
-  "chinese_currency_uppercase",
+  '',
+  'identity',
+  'date_year',
+  'date_month',
+  'date_day',
+  'trim',
+  'uppercase',
+  'lowercase',
+  'chinese_currency_uppercase'
 ] as const;
 
 export function TemplateEditorPage({
   templateId,
-  navigate,
+  navigate
 }: {
   templateId: string;
   navigate: Navigate;
@@ -27,11 +27,11 @@ export function TemplateEditorPage({
   const loaded = useAsyncData(() => window.docufill.templates.load(templateId), [templateId]);
   const inspection = useAsyncData(
     () => window.docufill.templates.inspect(templateId),
-    [templateId],
+    [templateId]
   );
   const preview = useAsyncData(
     () => window.docufill.templates.promptPreview(templateId),
-    [templateId],
+    [templateId]
   );
 
   const [draft, setDraft] = useState<TemplateSchema | null>(null);
@@ -79,8 +79,8 @@ export function TemplateEditorPage({
       ...draft,
       fields: {
         ...draft.fields,
-        [key]: { ...current, ...patch },
-      },
+        [key]: { ...current, ...patch }
+      }
     });
   }
 
@@ -105,11 +105,11 @@ export function TemplateEditorPage({
       <header className="page-header">
         <h1>{draft.name}</h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: "newRun", templateId: draft.id })}>
+          <button onClick={() => navigate({ page: 'newRun', templateId: draft.id })}>
             New run
           </button>
           <button className="primary" disabled={busy} onClick={() => void save()}>
-            {saved ? "Saved ✓" : "Save"}
+            {saved ? 'Saved ✓' : 'Save'}
           </button>
         </div>
       </header>
@@ -135,14 +135,14 @@ export function TemplateEditorPage({
           <label>
             Description
             <input
-              value={draft.description ?? ""}
+              value={draft.description ?? ''}
               onChange={(event) => {
                 setSaved(false);
                 setDraft({
                   ...draft,
-                  ...(event.target.value === ""
+                  ...(event.target.value === ''
                     ? { description: undefined }
-                    : { description: event.target.value }),
+                    : { description: event.target.value })
                 });
               }}
             />
@@ -170,16 +170,16 @@ export function TemplateEditorPage({
         {report && (
           <div className="report">
             <div>
-              Detected: <code>{report.placeholders.join(", ") || "none"}</code>
+              Detected: <code>{report.placeholders.join(', ') || 'none'}</code>
             </div>
             {report.unconfigured.length > 0 && (
               <div className="warn-text">
-                Not bound yet: <code>{report.unconfigured.join(", ")}</code>
+                Not bound yet: <code>{report.unconfigured.join(', ')}</code>
               </div>
             )}
             {report.unreferenced.length > 0 && (
               <div className="warn-text">
-                Configured but unreferenced: <code>{report.unreferenced.join(", ")}</code>
+                Configured but unreferenced: <code>{report.unreferenced.join(', ')}</code>
               </div>
             )}
           </div>
@@ -215,10 +215,10 @@ export function TemplateEditorPage({
                 <label>
                   Meaning (description)
                   <input
-                    value={field.description ?? ""}
+                    value={field.description ?? ''}
                     onChange={(event) =>
                       updateField(key, {
-                        description: event.target.value || undefined,
+                        description: event.target.value || undefined
                       })
                     }
                   />
@@ -228,7 +228,7 @@ export function TemplateEditorPage({
                   <select
                     value={field.type}
                     onChange={(event) =>
-                      updateField(key, { type: event.target.value as FieldDefinition["type"] })
+                      updateField(key, { type: event.target.value as FieldDefinition['type'] })
                     }
                   >
                     {FIELD_TYPES.map((type) => (
@@ -250,13 +250,13 @@ export function TemplateEditorPage({
                   AI extraction instruction
                   <textarea
                     rows={2}
-                    value={field.extraction?.instruction ?? ""}
+                    value={field.extraction?.instruction ?? ''}
                     onChange={(event) =>
                       updateField(key, {
                         extraction:
-                          event.target.value === ""
+                          event.target.value === ''
                             ? undefined
-                            : { instruction: event.target.value },
+                            : { instruction: event.target.value }
                       })
                     }
                   />
@@ -264,12 +264,12 @@ export function TemplateEditorPage({
                 <label>
                   Validation regex
                   <input
-                    value={field.validation?.regex ?? ""}
+                    value={field.validation?.regex ?? ''}
                     placeholder="^[0-9A-Za-z-]+$"
                     onChange={(event) =>
                       updateField(key, {
                         validation:
-                          event.target.value === "" ? undefined : { regex: event.target.value },
+                          event.target.value === '' ? undefined : { regex: event.target.value }
                       })
                     }
                   />
@@ -277,13 +277,13 @@ export function TemplateEditorPage({
                 <label>
                   Output date format
                   <input
-                    value={field.output?.format ?? ""}
+                    value={field.output?.format ?? ''}
                     placeholder="YYYY-MM-DD"
-                    disabled={field.type !== "date"}
+                    disabled={field.type !== 'date'}
                     onChange={(event) =>
                       updateField(key, {
                         output:
-                          event.target.value === "" ? undefined : { format: event.target.value },
+                          event.target.value === '' ? undefined : { format: event.target.value }
                       })
                     }
                   />
@@ -294,7 +294,7 @@ export function TemplateEditorPage({
                     checked={field.normalization?.trim ?? false}
                     onChange={(event) =>
                       updateField(key, {
-                        normalization: { ...field.normalization, trim: event.target.checked },
+                        normalization: { ...field.normalization, trim: event.target.checked }
                       })
                     }
                   />
@@ -308,8 +308,8 @@ export function TemplateEditorPage({
                       updateField(key, {
                         normalization: {
                           ...field.normalization,
-                          remove_spaces: event.target.checked,
-                        },
+                          remove_spaces: event.target.checked
+                        }
                       })
                     }
                   />
@@ -326,8 +326,8 @@ export function TemplateEditorPage({
               ...draft,
               fields: {
                 ...draft.fields,
-                [key]: { label: key, type: "string", required: true },
-              },
+                [key]: { label: key, type: 'string', required: true }
+              }
             });
           }}
         />
@@ -352,17 +352,17 @@ export function TemplateEditorPage({
                   </td>
                   <td>
                     <select
-                      value={binding?.source ?? ""}
+                      value={binding?.source ?? ''}
                       onChange={(event) => {
                         setSaved(false);
                         const source = event.target.value;
                         const bindings = { ...(draft.bindings ?? {}) };
-                        if (source === "") {
+                        if (source === '') {
                           delete bindings[placeholder];
                         } else {
                           bindings[placeholder] = {
                             source,
-                            ...(binding?.transform ? { transform: binding.transform } : {}),
+                            ...(binding?.transform ? { transform: binding.transform } : {})
                           };
                         }
                         setDraft({ ...draft, bindings });
@@ -378,7 +378,7 @@ export function TemplateEditorPage({
                   </td>
                   <td>
                     <select
-                      value={binding?.transform ?? ""}
+                      value={binding?.transform ?? ''}
                       disabled={!binding}
                       onChange={(event) => {
                         if (!draft || !binding) return;
@@ -386,7 +386,7 @@ export function TemplateEditorPage({
                         const transform = event.target.value;
                         const bindings = { ...(draft.bindings ?? {}) };
                         bindings[placeholder] =
-                          transform === ""
+                          transform === ''
                             ? { source: binding.source }
                             : { source: binding.source, transform };
                         setDraft({ ...draft, bindings });
@@ -394,7 +394,7 @@ export function TemplateEditorPage({
                     >
                       {TRANSFORMS.map((transform) => (
                         <option key={transform} value={transform}>
-                          {transform === "" ? "(none)" : transform}
+                          {transform === '' ? '(none)' : transform}
                         </option>
                       ))}
                     </select>
@@ -412,7 +412,7 @@ export function TemplateEditorPage({
           preview.data && (
             <button
               className="link"
-              onClick={() => void copyToClipboard(preview.data?.prompt ?? "")}
+              onClick={() => void copyToClipboard(preview.data?.prompt ?? '')}
             >
               copy prompt
             </button>
@@ -435,7 +435,7 @@ export function TemplateEditorPage({
 }
 
 function AddFieldRow({ onAdd }: { onAdd: (key: string) => void }) {
-  const [key, setKey] = useState("");
+  const [key, setKey] = useState('');
   const valid = /^[a-z0-9_]+$/.test(key);
   return (
     <div className="add-field-row">
@@ -448,7 +448,7 @@ function AddFieldRow({ onAdd }: { onAdd: (key: string) => void }) {
         disabled={!valid}
         onClick={() => {
           onAdd(key);
-          setKey("");
+          setKey('');
         }}
       >
         Add field

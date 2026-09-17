@@ -1,7 +1,7 @@
-import type { RunSummary } from "@docufill/schema";
-import type { Navigate } from "../App";
-import { ErrorBanner, Section, StatusBadge } from "../components/ui";
-import { useAsyncData } from "../hooks/useAsyncData";
+import type { RunSummary } from '@docufill/schema';
+import type { Navigate } from '../App';
+import { ErrorBanner, Section, StatusBadge } from '../components/ui';
+import { useAsyncData } from '../hooks/useAsyncData';
 
 export function RunsPage({ navigate }: { navigate: Navigate }) {
   const runs = useAsyncData(() => window.docufill.runs.list(), []);
@@ -11,7 +11,7 @@ export function RunsPage({ navigate }: { navigate: Navigate }) {
       <header className="page-header">
         <h1>Runs</h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: "newRun" })}>New run</button>
+          <button onClick={() => navigate({ page: 'newRun' })}>New run</button>
         </div>
       </header>
 
@@ -38,13 +38,13 @@ export function RunsPage({ navigate }: { navigate: Navigate }) {
                 <td>{run.templateId}</td>
                 <td className="muted">{new Date(run.createdAt).toLocaleString()}</td>
                 <td className="artifact-chips">
-                  <StatusBadge status={run.artifacts.prompt ? "prompt" : "no-prompt"} />
-                  <StatusBadge status={run.artifacts.extraction ? "extraction" : "no-extraction"} />
-                  <StatusBadge status={run.artifacts.review ? "review" : "no-review"} />
-                  <StatusBadge status={run.artifacts.output ? "output" : "no-output"} />
+                  <StatusBadge status={run.artifacts.prompt ? 'prompt' : 'no-prompt'} />
+                  <StatusBadge status={run.artifacts.extraction ? 'extraction' : 'no-extraction'} />
+                  <StatusBadge status={run.artifacts.review ? 'review' : 'no-review'} />
+                  <StatusBadge status={run.artifacts.output ? 'output' : 'no-output'} />
                 </td>
                 <td>
-                  <button className="link" onClick={() => navigate({ page: "run", runId: run.id })}>
+                  <button className="link" onClick={() => navigate({ page: 'run', runId: run.id })}>
                     Open
                   </button>
                 </td>

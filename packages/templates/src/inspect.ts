@@ -1,5 +1,5 @@
-import type { TemplateInspection } from "@docufill/docx";
-import type { PlaceholderReport, TemplateSchema } from "@docufill/schema";
+import type { TemplateInspection } from '@docufill/docx';
+import type { PlaceholderReport, TemplateSchema } from '@docufill/schema';
 
 /**
  * Compare discovered DOCX placeholders with the template configuration.
@@ -9,7 +9,7 @@ import type { PlaceholderReport, TemplateSchema } from "@docufill/schema";
  */
 export function computePlaceholderReport(
   inspection: TemplateInspection,
-  schema: TemplateSchema,
+  schema: TemplateSchema
 ): PlaceholderReport {
   const bindings = schema.bindings ?? {};
   const fieldKeys = new Set(Object.keys(schema.fields));
@@ -17,8 +17,8 @@ export function computePlaceholderReport(
   return {
     placeholders: inspection.placeholders,
     unconfigured: inspection.placeholders.filter(
-      (placeholder) => !Object.hasOwn(bindings, placeholder),
+      (placeholder) => !Object.hasOwn(bindings, placeholder)
     ),
-    unreferenced: [...fieldKeys].filter((field) => !referencedSources.has(field)).sort(),
+    unreferenced: [...fieldKeys].filter((field) => !referencedSources.has(field)).sort()
   };
 }

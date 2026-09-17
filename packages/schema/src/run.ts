@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const RUN_SCHEMA_VERSION = 1;
 
 export const attachmentMetadataSchema = z.object({
   filename: z.string().min(1),
   original_filename: z.string().min(1),
-  media_type: z.string().min(1),
+  media_type: z.string().min(1)
 });
 
 export type AttachmentMetadata = z.output<typeof attachmentMetadataSchema>;
@@ -17,7 +17,7 @@ export const runMetadataSchema = z.object({
   template_id: z.string().min(1),
   template_schema_version: z.number().int(),
   prompt_version: z.string().min(1),
-  attachments: z.array(attachmentMetadataSchema).default([]),
+  attachments: z.array(attachmentMetadataSchema).default([])
 });
 
 export type RunMetadata = z.output<typeof runMetadataSchema>;
@@ -40,10 +40,10 @@ export interface RunSummary {
 export const REVIEW_SCHEMA_VERSION = 1;
 
 export const reviewDecisionSchema = z.enum([
-  "accepted",
-  "corrected",
-  "rejected",
-  "filled_manually",
+  'accepted',
+  'corrected',
+  'rejected',
+  'filled_manually'
 ]);
 
 export type ReviewDecision = z.output<typeof reviewDecisionSchema>;
@@ -51,21 +51,21 @@ export type ReviewDecision = z.output<typeof reviewDecisionSchema>;
 export const reviewedFieldSchema = z.object({
   model_value: z.unknown(),
   final_value: z.unknown(),
-  decision: reviewDecisionSchema,
+  decision: reviewDecisionSchema
 });
 
 export type ReviewedField = z.output<typeof reviewedFieldSchema>;
 
 export const reviewedRecordSchema = z.object({
   schema_version: z.literal(REVIEW_SCHEMA_VERSION),
-  fields: z.record(z.string(), reviewedFieldSchema),
+  fields: z.record(z.string(), reviewedFieldSchema)
 });
 
 export type ReviewedRecord = z.output<typeof reviewedRecordSchema>;
 
 export const normalizedRecordSchema = z.object({
   schema_version: z.literal(RUN_SCHEMA_VERSION),
-  values: z.record(z.string(), z.unknown()),
+  values: z.record(z.string(), z.unknown())
 });
 
 export type NormalizedRecord = z.output<typeof normalizedRecordSchema>;

@@ -8,7 +8,6 @@
    split into focused modules.
 
 Debug builds write logs into `debug-logs/` (release builds into the per-user data directory):
-`debug.log` is a summary of application warnings/errors, and
-`debug-{feature}.log` hold full per-domain output with startup and 2 MB
-size rotation (`*.previous.log` keeps the prior session) — check the summary file first, then the
-matching domain file, when debugging.
+`debug.log` is a summary of application warnings/errors, and `debug-{feature}.log` hold full
+per-domain output with startup and 2 MB size rotation (`*.previous.log` keeps the prior session) —
+check the summary file first, then the matching domain file, when debugging.

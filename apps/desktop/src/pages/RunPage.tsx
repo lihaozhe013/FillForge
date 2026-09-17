@@ -1,9 +1,9 @@
-import type { ExtractionIssue } from "@docufill/extraction";
-import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from "@docufill/schema";
-import { useEffect, useState } from "react";
-import type { Navigate } from "../App";
-import { ErrorBanner, Section, StatusBadge } from "../components/ui";
-import { copyToClipboard, extractError, useAsyncData } from "../hooks/useAsyncData";
+import type { ExtractionIssue } from '@docufill/extraction';
+import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from '@docufill/schema';
+import { useEffect, useState } from 'react';
+import type { Navigate } from '../App';
+import { ErrorBanner, Section, StatusBadge } from '../components/ui';
+import { copyToClipboard, extractError, useAsyncData } from '../hooks/useAsyncData';
 
 export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate }) {
   const run = useAsyncData(() => window.docufill.runs.load(runId), [runId]);
@@ -12,13 +12,13 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
       run.data
         ? window.docufill.templates.load(run.data.metadata.template_id)
         : Promise.resolve(null),
-    [run.data],
+    [run.data]
   );
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [rawPaste, setRawPaste] = useState("");
+  const [rawPaste, setRawPaste] = useState('');
   const [issues, setIssues] = useState<ExtractionIssue[]>([]);
   const [finalValues, setFinalValues] = useState<Record<string, unknown>>({});
 
@@ -36,7 +36,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
       }
       const seeded: Record<string, unknown> = {};
       for (const [key, extracted] of Object.entries(extraction)) {
-        seeded[key] = extracted.value === null ? "" : String(extracted.value ?? "");
+        seeded[key] = extracted.value === null ? '' : String(extracted.value ?? '');
       }
       return seeded;
     });
@@ -68,14 +68,14 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
           Run <code>{runId}</code>
         </h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: "runs" })}>All runs</button>
+          <button onClick={() => navigate({ page: 'runs' })}>All runs</button>
         </div>
       </header>
 
       <ErrorBanner error={error ?? run.error} />
       {notice && (
         <div className="notice-banner">
-          {notice}{" "}
+          {notice}{' '}
           <button className="link" onClick={() => setNotice(null)}>
             dismiss
           </button>
@@ -86,8 +86,8 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
         <Section title="Run">
           <div className="report">
             <div>
-              Template: <code>{metadata.template_id}</code> · Created:{" "}
-              {new Date(metadata.created_at).toLocaleString()} · Prompt version:{" "}
+              Template: <code>{metadata.template_id}</code> · Created:{' '}
+              {new Date(metadata.created_at).toLocaleString()} · Prompt version:{' '}
               <code>{metadata.prompt_version}</code>
             </div>
             <div>
@@ -116,12 +116,12 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
         <ul className="list">
           {(metadata?.attachments ?? []).map((attachment: AttachmentMetadata) => (
             <li key={attachment.filename}>
-              {attachment.filename}{" "}
+              {attachment.filename}{' '}
               <span className="muted">
                 ({attachment.media_type}
                 {attachment.original_filename !== attachment.filename
                   ? `, from ${attachment.original_filename}`
-                  : ""}
+                  : ''}
                 )
               </span>
             </li>
@@ -143,7 +143,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 <button
                   disabled={busy}
                   onClick={() =>
-                    void act(() => window.docufill.runs.generatePrompt(runId), "Prompt generated.")
+                    void act(() => window.docufill.runs.generatePrompt(runId), 'Prompt generated.')
                   }
                 >
                   Generate prompt
@@ -153,7 +153,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 <>
                   <button
                     className="link"
-                    onClick={() => void copyToClipboard(run.data?.prompt ?? "")}
+                    onClick={() => void copyToClipboard(run.data?.prompt ?? '')}
                   >
                     copy prompt
                   </button>
@@ -189,13 +189,13 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
         <div className="row-actions">
           <button
             className="primary"
-            disabled={busy || rawPaste.trim() === ""}
+            disabled={busy || rawPaste.trim() === ''}
             onClick={async () => {
               await act(async () => {
                 const imported = await window.docufill.runs.importExtraction(runId, rawPaste);
                 setIssues(imported.issues);
-              }, "Extraction imported. Review the values below.");
-              setRawPaste("");
+              }, 'Extraction imported. Review the values below.');
+              setRawPaste('');
             }}
           >
             Import extraction
@@ -238,17 +238,17 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                       <code className="muted">{key}</code>
                     </td>
                     <td className="model-value">
-                      {extracted.value === null ? "—" : String(extracted.value)}
+                      {extracted.value === null ? '—' : String(extracted.value)}
                     </td>
                     <td>
                       <StatusBadge status={extracted.status} />
                     </td>
-                    <td className="muted evidence">{extracted.evidence ?? "—"}</td>
+                    <td className="muted evidence">{extracted.evidence ?? '—'}</td>
                     <td>
                       <input
                         value={
                           finalValues[key] === undefined || finalValues[key] === null
-                            ? ""
+                            ? ''
                             : String(finalValues[key])
                         }
                         onChange={(event) =>
@@ -263,7 +263,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
             </tbody>
           </table>
           <p className="muted">
-            Editing a value keeps the original AI value untouched: corrections are stored in{" "}
+            Editing a value keeps the original AI value untouched: corrections are stored in{' '}
             <code>review.json</code>, the model output stays in <code>extraction.json</code>.
           </p>
           <div className="row-actions">
@@ -271,7 +271,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               className="primary"
               disabled={busy}
               onClick={() =>
-                void act(() => window.docufill.runs.saveReview(runId, finalValues), "Review saved.")
+                void act(() => window.docufill.runs.saveReview(runId, finalValues), 'Review saved.')
               }
             >
               Save review
@@ -279,7 +279,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
             <button
               disabled={busy}
               onClick={() =>
-                void act(() => window.docufill.runs.normalize(runId), "Normalized values written.")
+                void act(() => window.docufill.runs.normalize(runId), 'Normalized values written.')
               }
             >
               Normalize
@@ -290,7 +290,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 void act(async () => {
                   await window.docufill.runs.normalize(runId);
                   await window.docufill.runs.render(runId);
-                }, "Document rendered.")
+                }, 'Document rendered.')
               }
             >
               Normalize + Render DOCX
@@ -308,7 +308,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               <li key={output.filename} className="output-row">
                 <span>
                   {output.filename}
-                  {output.filename === "result.docx" && <span className="muted"> (latest)</span>}
+                  {output.filename === 'result.docx' && <span className="muted"> (latest)</span>}
                 </span>
                 <span className="actions-cell">
                   <button
@@ -330,7 +330,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                     onClick={() =>
                       void act(
                         () => window.docufill.system.exportCopy(output.path),
-                        "Copy exported.",
+                        'Copy exported.'
                       )
                     }
                   >

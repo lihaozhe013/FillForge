@@ -1,7 +1,7 @@
-import Docxtemplater from "docxtemplater";
-import PizZip from "pizzip";
-import { DocxInspectionError } from "./errors.ts";
-import type { TemplateInspection } from "./renderer.ts";
+import Docxtemplater from 'docxtemplater';
+import PizZip from 'pizzip';
+import { DocxInspectionError } from './errors.ts';
+import type { TemplateInspection } from './renderer.ts';
 
 /**
  * Normalize a raw Docxtemplater tag into a placeholder key.
@@ -13,7 +13,7 @@ export function normalizeTag(rawTag: string): string | null {
   if (!tag || /^[#/^]/.test(tag)) {
     return null;
   }
-  const withoutFilters = tag.split("|")[0]?.trim() ?? "";
+  const withoutFilters = tag.split('|')[0]?.trim() ?? '';
   return withoutFilters || null;
 }
 
@@ -36,13 +36,13 @@ export function describeDocxtemplaterError(error: unknown): {
           props.properties?.id ??
           props.explanation ??
           props.id ??
-          "Unknown template error"
+          'Unknown template error'
         );
       })
-      .join("; ");
+      .join('; ');
     return { message: explanations, details: errors };
   }
-  const message = error instanceof Error ? error.message : "Unknown DOCX template error";
+  const message = error instanceof Error ? error.message : 'Unknown DOCX template error';
   return { message, details: undefined };
 }
 
@@ -64,14 +64,14 @@ export function inspectDocxPlaceholders(document: Uint8Array): TemplateInspectio
       linebreaks: true,
       parser: (tag: string) => {
         rawTags.add(tag);
-        return { get: () => "" };
-      },
+        return { get: () => '' };
+      }
     });
   } catch (error) {
     const { message, details } = describeDocxtemplaterError(error);
     throw new DocxInspectionError(`The DOCX template could not be inspected: ${message}`, {
       details,
-      cause: error,
+      cause: error
     });
   }
 

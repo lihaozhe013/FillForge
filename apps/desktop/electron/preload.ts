@@ -1,6 +1,6 @@
-import { contextBridge, ipcRenderer } from "electron";
-import type { AppErrorDtoLike, DocufillApi, IpcResult } from "../src/lib/ipc-protocol";
-import { IPC } from "../src/lib/ipc-protocol";
+import { contextBridge, ipcRenderer } from 'electron';
+import type { AppErrorDtoLike, DocufillApi, IpcResult } from '../src/lib/ipc-protocol';
+import { IPC } from '../src/lib/ipc-protocol';
 
 export class IpcError extends Error {
   readonly code: string;
@@ -8,7 +8,7 @@ export class IpcError extends Error {
 
   constructor(dto: AppErrorDtoLike) {
     super(dto.message);
-    this.name = "IpcError";
+    this.name = 'IpcError';
     this.code = dto.code;
     this.details = dto.details;
   }
@@ -31,7 +31,7 @@ const api: DocufillApi = {
     inspect: (id) => invoke(IPC.templatesInspect, { id }),
     duplicate: (id) => invoke(IPC.templatesDuplicate, { id }),
     delete: (id) => invoke(IPC.templatesDelete, { id }),
-    promptPreview: (id) => invoke(IPC.templatesPromptPreview, { id }),
+    promptPreview: (id) => invoke(IPC.templatesPromptPreview, { id })
   },
   runs: {
     create: (input) => invoke(IPC.runsCreate, input),
@@ -42,13 +42,13 @@ const api: DocufillApi = {
     saveReview: (id, finalValues) => invoke(IPC.runsSaveReview, { id, finalValues }),
     normalize: (id) => invoke(IPC.runsNormalize, { id }),
     render: (id) => invoke(IPC.runsRender, { id }),
-    attachFiles: (id) => invoke(IPC.runsAttachFiles, { id }),
+    attachFiles: (id) => invoke(IPC.runsAttachFiles, { id })
   },
   system: {
     openPath: (filePath) => invoke(IPC.systemOpenPath, { path: filePath }),
     showItemInFolder: (filePath) => invoke(IPC.systemShowItemInFolder, { path: filePath }),
-    exportCopy: (filePath) => invoke(IPC.systemExportCopy, { path: filePath }),
-  },
+    exportCopy: (filePath) => invoke(IPC.systemExportCopy, { path: filePath })
+  }
 };
 
-contextBridge.exposeInMainWorld("docufill", api);
+contextBridge.exposeInMainWorld('docufill', api);

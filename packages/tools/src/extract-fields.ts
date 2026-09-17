@@ -1,5 +1,5 @@
-import { buildExtractionPrompt } from "@docufill/extraction";
-import type { AppContext } from "./context.ts";
+import { buildExtractionPrompt } from '@docufill/extraction';
+import type { AppContext } from './context.ts';
 
 /**
  * Print the deterministic extraction prompt for a template. Pipe it into a

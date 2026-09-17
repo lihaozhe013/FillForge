@@ -1,15 +1,15 @@
-import { readFileBinary } from "@docufill/core";
-import type { DocumentRenderer } from "@docufill/docx";
+import { readFileBinary } from '@docufill/core';
+import type { DocumentRenderer } from '@docufill/docx';
 import type {
   CreateTemplateInput,
   FieldDefinition,
   PlaceholderReport,
   TemplateBinding,
   TemplateSchema,
-  TemplateSummary,
-} from "@docufill/schema";
-import { computePlaceholderReport } from "./inspect.ts";
-import { FileTemplateRepository, type TemplateRepository } from "./repository.ts";
+  TemplateSummary
+} from '@docufill/schema';
+import { computePlaceholderReport } from './inspect.ts';
+import { FileTemplateRepository, type TemplateRepository } from './repository.ts';
 
 export class TemplateService {
   readonly repository: TemplateRepository;
@@ -45,7 +45,7 @@ export class TemplateService {
     const schema = await this.repository.load(id);
     const merged: TemplateSchema = {
       ...schema,
-      fields: { ...schema.fields, ...fields },
+      fields: { ...schema.fields, ...fields }
     };
     await this.repository.saveSchema(id, merged);
     return merged;
@@ -53,12 +53,12 @@ export class TemplateService {
 
   async mergeBindings(
     id: string,
-    bindings: Record<string, TemplateBinding>,
+    bindings: Record<string, TemplateBinding>
   ): Promise<TemplateSchema> {
     const schema = await this.repository.load(id);
     const merged: TemplateSchema = {
       ...schema,
-      bindings: { ...(schema.bindings ?? {}), ...bindings },
+      bindings: { ...(schema.bindings ?? {}), ...bindings }
     };
     await this.repository.saveSchema(id, merged);
     return merged;
@@ -67,7 +67,7 @@ export class TemplateService {
   async inspectTemplate(id: string): Promise<PlaceholderReport> {
     const [schema, documentPath] = await Promise.all([
       this.repository.load(id),
-      this.repository.getDocumentPath(id),
+      this.repository.getDocumentPath(id)
     ]);
     const document = await readFileBinary(documentPath);
     const inspection = await this.renderer.inspect(document);

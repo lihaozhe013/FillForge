@@ -2,8 +2,8 @@ import {
   type FieldDefinition,
   type FieldDefinitions,
   PROMPT_VERSION,
-  type TemplateSchema,
-} from "@docufill/schema";
+  type TemplateSchema
+} from '@docufill/schema';
 
 export interface GeneratedPrompt {
   prompt: string;
@@ -13,14 +13,14 @@ export interface GeneratedPrompt {
 
 function describeExpectedValue(field: FieldDefinition): string {
   switch (field.type) {
-    case "number":
-      return "number or null";
-    case "boolean":
-      return "boolean or null";
-    case "date":
-      return `date string (${field.output?.format ?? "YYYY-MM-DD"}) or null`;
+    case 'number':
+      return 'number or null';
+    case 'boolean':
+      return 'boolean or null';
+    case 'date':
+      return `date string (${field.output?.format ?? 'YYYY-MM-DD'}) or null`;
     default:
-      return "string or null";
+      return 'string or null';
   }
 }
 
@@ -30,8 +30,8 @@ export function buildExpectedJson(fields: FieldDefinitions): string {
   for (const [key, field] of Object.entries(fields)) {
     shape[key] = {
       value: describeExpectedValue(field),
-      status: "found | not_found | ambiguous",
-      evidence: "short supporting text or null",
+      status: 'found | not_found | ambiguous',
+      evidence: 'short supporting text or null'
     };
   }
   return JSON.stringify(shape, null, 2);
@@ -42,15 +42,15 @@ function describeField(key: string, field: FieldDefinition): string {
     key,
     `Meaning: ${field.label}`,
     `Type: ${field.type}`,
-    `Required: ${field.required ? "yes" : "no"}`,
+    `Required: ${field.required ? 'yes' : 'no'}`
   ];
   if (field.description) {
     lines.push(`Description: ${field.description}`);
   }
   if (field.extraction?.instruction) {
-    lines.push("Extraction rule:", field.extraction.instruction.trim());
+    lines.push('Extraction rule:', field.extraction.instruction.trim());
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -63,23 +63,23 @@ export function buildExtractionPrompt(template: TemplateSchema): GeneratedPrompt
   const fieldKeys = Object.keys(fields);
   if (fieldKeys.length === 0) {
     throw new Error(
-      `Template "${template.id}" has no configured fields; configure fields before generating a prompt.`,
+      `Template "${template.id}" has no configured fields; configure fields before generating a prompt.`
     );
   }
 
   const sections: string[] = [
-    "You are a structured document information extractor.",
-    "",
-    "Inspect the documents/images supplied by the user.",
-    "",
-    "Extract only the requested fields.",
-    "",
-    "Do not guess.",
-    "",
-    "If a field cannot be reliably determined, set its value to null and describe why through the status and evidence fields.",
-    "",
-    "Requested fields:",
-    "",
+    'You are a structured document information extractor.',
+    '',
+    'Inspect the documents/images supplied by the user.',
+    '',
+    'Extract only the requested fields.',
+    '',
+    'Do not guess.',
+    '',
+    'If a field cannot be reliably determined, set its value to null and describe why through the status and evidence fields.',
+    '',
+    'Requested fields:',
+    '',
     fieldKeys
       .map((key) => {
         const field = fields[key];
@@ -88,20 +88,20 @@ export function buildExtractionPrompt(template: TemplateSchema): GeneratedPrompt
         }
         return describeField(key, field);
       })
-      .join("\n\n"),
-    "",
-    "For every field, determine one status: found, not_found, or ambiguous.",
-    "",
-    "Return valid JSON only, with no commentary before or after it.",
-    "",
-    "Expected format:",
-    "",
-    buildExpectedJson(fields),
+      .join('\n\n'),
+    '',
+    'For every field, determine one status: found, not_found, or ambiguous.',
+    '',
+    'Return valid JSON only, with no commentary before or after it.',
+    '',
+    'Expected format:',
+    '',
+    buildExpectedJson(fields)
   ];
 
   return {
-    prompt: `${sections.join("\n")}\n`,
+    prompt: `${sections.join('\n')}\n`,
     expectedJson: buildExpectedJson(fields),
-    promptVersion: PROMPT_VERSION,
+    promptVersion: PROMPT_VERSION
   };
 }

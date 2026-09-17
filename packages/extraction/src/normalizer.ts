@@ -1,4 +1,4 @@
-import type { ExtractionResult, FieldDefinition, FieldDefinitions } from "@docufill/schema";
+import type { ExtractionResult, FieldDefinition, FieldDefinitions } from '@docufill/schema';
 
 function applyStringNormalization(value: string, field: FieldDefinition): string {
   let out = value;
@@ -6,7 +6,7 @@ function applyStringNormalization(value: string, field: FieldDefinition): string
     out = out.trim();
   }
   if (field.normalization?.remove_spaces) {
-    out = out.replaceAll(" ", "");
+    out = out.replaceAll(' ', '');
   }
   return out;
 }
@@ -14,19 +14,19 @@ function applyStringNormalization(value: string, field: FieldDefinition): string
 const DATE_INPUT_PATTERN = /^(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})日?$/;
 
 function parseDateParts(value: unknown): [string, string, string] | null {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return null;
   }
   const match = DATE_INPUT_PATTERN.exec(value.trim());
   if (!match?.[1] || !match[2] || !match[3]) {
     return null;
   }
-  return [match[1], match[2].padStart(2, "0"), match[3].padStart(2, "0")];
+  return [match[1], match[2].padStart(2, '0'), match[3].padStart(2, '0')];
 }
 
 export function formatDate(parts: [string, string, string], format: string): string {
   const [year, month, day] = parts;
-  return format.replaceAll("YYYY", year).replaceAll("MM", month).replaceAll("DD", day);
+  return format.replaceAll('YYYY', year).replaceAll('MM', month).replaceAll('DD', day);
 }
 
 function applyDateNormalization(value: unknown, field: FieldDefinition): unknown {
@@ -34,7 +34,7 @@ function applyDateNormalization(value: unknown, field: FieldDefinition): unknown
   if (!parts) {
     return value;
   }
-  return formatDate(parts, field.output?.format ?? "YYYY-MM-DD");
+  return formatDate(parts, field.output?.format ?? 'YYYY-MM-DD');
 }
 
 /**
@@ -47,37 +47,37 @@ export function normalizeFieldValue(field: FieldDefinition, value: unknown): unk
     return value;
   }
   switch (field.type) {
-    case "string": {
-      if (typeof value !== "string") {
+    case 'string': {
+      if (typeof value !== 'string') {
         return value;
       }
       return applyStringNormalization(value, field);
     }
-    case "number": {
-      if (typeof value === "number") {
+    case 'number': {
+      if (typeof value === 'number') {
         return value;
       }
-      if (typeof value === "string") {
+      if (typeof value === 'string') {
         const text = applyStringNormalization(value, {
           ...field,
-          normalization: { trim: true },
+          normalization: { trim: true }
         });
         const numeric = Number(text);
         return Number.isFinite(numeric) ? numeric : value;
       }
       return value;
     }
-    case "date": {
+    case 'date': {
       return applyDateNormalization(value, field);
     }
-    case "boolean": {
-      if (typeof value === "boolean") {
+    case 'boolean': {
+      if (typeof value === 'boolean') {
         return value;
       }
-      if (value === "true") {
+      if (value === 'true') {
         return true;
       }
-      if (value === "false") {
+      if (value === 'false') {
         return false;
       }
       return value;
@@ -91,7 +91,7 @@ export function normalizeFieldValue(field: FieldDefinition, value: unknown): unk
  */
 export function normalizeValues(
   values: Record<string, unknown>,
-  fields: FieldDefinitions,
+  fields: FieldDefinitions
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(values)) {
@@ -113,7 +113,7 @@ export function normalizeValues(
  */
 export function normalizeExtractionResult(
   result: ExtractionResult,
-  fields: FieldDefinitions,
+  fields: FieldDefinitions
 ): Record<string, unknown> {
   const values: Record<string, unknown> = {};
   for (const [key, extracted] of Object.entries(result)) {

@@ -1,7 +1,7 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { atomicWriteFile } from "./atomic-write.ts";
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { atomicWriteFile } from './atomic-write.ts';
 
 export async function pathExists(target: string): Promise<boolean> {
   try {
@@ -17,16 +17,16 @@ export async function ensureDirectory(target: string): Promise<void> {
 }
 
 export async function readTextFile(filePath: string): Promise<string> {
-  return fs.readFile(filePath, "utf8");
+  return fs.readFile(filePath, 'utf8');
 }
 
 export async function readYamlFile(filePath: string): Promise<unknown> {
-  const text = await fs.readFile(filePath, "utf8");
+  const text = await fs.readFile(filePath, 'utf8');
   return parseYaml(text);
 }
 
 export async function readJsonFile(filePath: string): Promise<unknown> {
-  const text = await fs.readFile(filePath, "utf8");
+  const text = await fs.readFile(filePath, 'utf8');
   return JSON.parse(text);
 }
 
@@ -50,7 +50,7 @@ export async function listSubdirectories(directory: string): Promise<string[]> {
       .map((entry) => entry.name)
       .sort();
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
     }
     throw error;
@@ -77,7 +77,7 @@ export async function copyFile(source: string, destination: string): Promise<voi
 export async function copyFileWithCollisionAvoidance(
   sourceFile: string,
   destinationDirectory: string,
-  filename = path.basename(sourceFile),
+  filename = path.basename(sourceFile)
 ): Promise<string> {
   await ensureDirectory(destinationDirectory);
   const extension = path.extname(filename);

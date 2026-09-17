@@ -1,4 +1,4 @@
-import type { AppContext } from "./context.ts";
+import type { AppContext } from './context.ts';
 
 /**
  * Print every placeholder found in a template's DOCX, plus configuration
@@ -10,13 +10,13 @@ export async function inspectTemplate(context: AppContext, templateId: string): 
   const lines = [
     `Template: ${template.name} (${template.id})`,
     `Placeholders (${report.placeholders.length}):`,
-    ...report.placeholders.map((placeholder) => `  - ${placeholder}`),
+    ...report.placeholders.map((placeholder) => `  - ${placeholder}`)
   ];
   if (report.unconfigured.length > 0) {
-    lines.push(`Unconfigured placeholders: ${report.unconfigured.join(", ")}`);
+    lines.push(`Unconfigured placeholders: ${report.unconfigured.join(', ')}`);
   }
   if (report.unreferenced.length > 0) {
-    lines.push(`Configured but unreferenced fields: ${report.unreferenced.join(", ")}`);
+    lines.push(`Configured but unreferenced fields: ${report.unreferenced.join(', ')}`);
   }
-  return lines.join("\n");
+  return lines.join('\n');
 }

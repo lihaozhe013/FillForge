@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 /**
  * Write a file so that a crash can never leave a partially written target.
@@ -12,9 +12,9 @@ export async function atomicWriteFile(target: string, data: string | Uint8Array)
   await fs.mkdir(directory, { recursive: true });
   const tempFile = path.join(
     directory,
-    `.${path.basename(target)}.${process.pid}.${randomUUID()}.tmp`,
+    `.${path.basename(target)}.${process.pid}.${randomUUID()}.tmp`
   );
-  const handle = await fs.open(tempFile, "wx");
+  const handle = await fs.open(tempFile, 'wx');
   try {
     await handle.writeFile(data);
     await handle.sync();

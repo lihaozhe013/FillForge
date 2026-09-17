@@ -1,6 +1,6 @@
-import path from "node:path";
+import path from 'node:path';
 
-const ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const ENCODING = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const TIME_LENGTH = 10;
 const RANDOM_LENGTH = 16;
 const RANDOM_BITS = BigInt(RANDOM_LENGTH * 5);
@@ -10,7 +10,7 @@ let lastRandom = 0n;
 
 function encodeTime(time: number): string {
   let remaining = time;
-  let out = "";
+  let out = '';
   for (let i = 0; i < TIME_LENGTH; i++) {
     out = ENCODING[remaining % 32] + out;
     remaining = Math.floor(remaining / 32);
@@ -20,7 +20,7 @@ function encodeTime(time: number): string {
 
 function encodeRandom(random: bigint): string {
   let remaining = random;
-  let out = "";
+  let out = '';
   for (let i = 0; i < RANDOM_LENGTH; i++) {
     out = ENCODING[Number(remaining & 31n)] + out;
     remaining >>= 5n;
@@ -72,9 +72,9 @@ export function ulidTimestamp(id: string): number {
 }
 
 export function randomSuffix(length = 6): string {
-  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
   const bytes = globalThis.crypto.getRandomValues(new Uint8Array(length));
-  let out = "";
+  let out = '';
   for (const byte of bytes) {
     out += alphabet[byte % alphabet.length];
   }
@@ -84,10 +84,10 @@ export function randomSuffix(length = 6): string {
 export function slugifyId(name: string): string {
   const slug = name
     .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
     .slice(0, 48);
   return slug || `template-${randomSuffix()}`;
 }

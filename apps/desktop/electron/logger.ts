@@ -1,6 +1,6 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { ensureDirectory } from "@docufill/core";
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { ensureDirectory } from '@docufill/core';
 
 const MAX_LOG_SIZE = 2 * 1024 * 1024;
 
@@ -11,7 +11,7 @@ let logsBaseDir: string | null = null;
  * builds use the per-user data directory.
  */
 export function initLogger(options: { isPackaged: boolean; logsDir: string }): void {
-  logsBaseDir = options.isPackaged ? options.logsDir : path.resolve("debug-logs");
+  logsBaseDir = options.isPackaged ? options.logsDir : path.resolve('debug-logs');
   void ensureDirectory(logsBaseDir).catch(() => {});
 }
 
@@ -32,14 +32,14 @@ async function appendLine(file: string, line: string): Promise<void> {
   }
   const target = path.join(logsBaseDir, file);
   await rotateIfNeeded(target).catch(() => {});
-  await fs.appendFile(target, `${new Date().toISOString()} ${line}\n`, "utf8").catch(() => {});
+  await fs.appendFile(target, `${new Date().toISOString()} ${line}\n`, 'utf8').catch(() => {});
 }
 
 /**
  * debug.log is a summary of application warnings and errors.
  */
-export function logAppEvent(level: "info" | "warn" | "error", message: string): void {
-  void appendLine("debug.log", `[${level}] ${message}`);
+export function logAppEvent(level: 'info' | 'warn' | 'error', message: string): void {
+  void appendLine('debug.log', `[${level}] ${message}`);
 }
 
 /**
