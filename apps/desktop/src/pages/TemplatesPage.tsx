@@ -75,7 +75,9 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
                   <button
                     className="link"
                     disabled={busy}
-                    onClick={() => void run(() => window.fillforge.templates.duplicate(template.id))}
+                    onClick={() =>
+                      void run(() => window.fillforge.templates.duplicate(template.id))
+                    }
                   >
                     Duplicate
                   </button>

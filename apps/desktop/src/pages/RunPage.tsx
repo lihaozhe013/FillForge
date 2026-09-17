@@ -271,7 +271,10 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               className="primary"
               disabled={busy}
               onClick={() =>
-                void act(() => window.fillforge.runs.saveReview(runId, finalValues), 'Review saved.')
+                void act(
+                  () => window.fillforge.runs.saveReview(runId, finalValues),
+                  'Review saved.'
+                )
               }
             >
               Save review

@@ -1,0 +1,18 @@
+# Dependencies
+node_modules
+
+# Build output
+out
+dist
+coverage
+
+# Generated / on-disk data
+apps/desktop/debug-logs
+*.log
+
+# Lockfiles are machine-generated
+pnpm-lock.yaml
+
+# Test fixtures are byte-exact inputs (e.g. deliberately-malformed payloads);
+# never let the formatter "repair" them.
+tests/fixtures

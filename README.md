@@ -53,11 +53,12 @@ pnpm dev        # start the Electron desktop app with hot reload
 Other commands:
 
 ```bash
-pnpm build      # build all workspace packages and the desktop app
-pnpm typecheck  # TypeScript 7, strict mode, across every package
-pnpm lint       # Biome (lint + format check)
-pnpm format     # Biome with autofix
-pnpm test       # Vitest unit + integration tests
+pnpm build        # build all workspace packages and the desktop app
+pnpm typecheck    # TypeScript 7, strict mode, across every package
+pnpm format       # Prettier (the source of truth for code style)
+pnpm format:check # Prettier check, e.g. before committing
+pnpm lint         # Biome lint rules (formatting is handled by Prettier)
+pnpm test         # Vitest unit + integration tests
 ```
 
 CLI utilities run outside Electron with the external Node 26 runtime:

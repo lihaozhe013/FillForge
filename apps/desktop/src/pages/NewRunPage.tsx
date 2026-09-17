@@ -74,8 +74,8 @@ export function NewRunPage({
 
       <Section title="2. Create the run">
         <p className="muted">
-          A run is a self-contained directory under <code>~/.local/fillforge/runs/&lt;id&gt;/</code>.
-          You can attach source images or PDFs to it afterwards; they are copied into the run and
+          A run is a self-contained directory under <code>~/.local/fillforge/runs/&lt;id&gt;/</code>
+          . You can attach source images or PDFs to it afterwards; they are copied into the run and
           never modified.
         </p>
         <button className="primary" disabled={!selected || busy} onClick={() => void createRun()}>
