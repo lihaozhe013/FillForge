@@ -42,7 +42,10 @@ export function App() {
     <div className="app">
       <aside className="sidebar">
         <button type="button" className="brand" onClick={() => navigate({ page: 'home' })}>
-          FillForge
+          <span className="brand-mark" aria-hidden="true">
+            F
+          </span>
+          <span className="brand-name">FillForge</span>
         </button>
         <nav>
           <button
