@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import { registerIpcHandlers } from './ipc/handlers';
 import { initLogger, logAppEvent } from './logger';
+import { installApplicationMenu } from './menu';
 import { createAppServices } from './services';
 import { createMainWindow, quitWhenAllWindowsClosedOnNonMac } from './window';
 
@@ -22,6 +23,7 @@ app.whenReady().then(async () => {
     });
     logAppEvent('info', `Data directory: ${services.paths.dataDir}`);
     registerIpcHandlers(services);
+    installApplicationMenu();
     createMainWindow();
   } catch (error) {
     logAppEvent(

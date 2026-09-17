@@ -62,7 +62,8 @@ The MVP MUST support this complete local workflow:
 | FF-MVP-08 | Versioned run artifacts and restart-safe history                              | Implemented |
 | FF-MVP-09 | Application settings for theme, editor options, and prompt version            | Implemented |
 | FF-MVP-10 | CLI access to inspection, prompt generation, validation, and rendering        | Implemented |
-| FF-MVP-11 | Direct model calls, agent runtime, MCP server, cloud sync, and authentication | Deferred    |
+| FF-MVP-11 | Native Help menu with links to the User Guide, specification, and repository  | Implemented |
+| FF-MVP-12 | Direct model calls, agent runtime, MCP server, cloud sync, and authentication | Deferred    |
 
 A feature is not considered part of the MVP merely because an interface or future seam exists.
 
@@ -779,6 +780,22 @@ System open, reveal, and export operations MUST:
 
 The renderer MUST NOT be given a general-purpose file read/write API.
 
+### 10.4 Help menu
+
+The desktop application MUST install a native application menu with a Help submenu. Help MUST
+provide these entries:
+
+| Menu item             | Destination                                                           |
+| --------------------- | --------------------------------------------------------------------- |
+| User Guide            | https://github.com/lihaozhe013/FillForge/blob/main/docs/USER_GUIDE.md |
+| Project Specification | https://github.com/lihaozhe013/FillForge/blob/main/SPEC.md            |
+| FillForge on GitHub   | https://github.com/lihaozhe013/FillForge                              |
+
+Each entry MUST open its destination with the operating system's external browser through Electron
+shell integration. The Help menu MUST NOT read arbitrary local files or expose a filesystem API to
+the renderer. The URLs are intentionally pinned to the main branch so a packaged application keeps a
+stable documentation entry point.
+
 ## 11. Security and privacy
 
 - BrowserWindow MUST use contextIsolation: true, nodeIntegration: false, sandbox: true where
@@ -879,7 +896,8 @@ The following scenario is the release-level acceptance test:
 11. Render again; confirm a new version is retained and result.docx mirrors the newest version.
 12. Restart the application; confirm the template, run, review, and output remain available from
     ordinary files without a database.
-13. Run the CLI inspection, validation, and rendering commands against the same isolated root.
+13. Open Help > User Guide and confirm it opens the public GitHub documentation page.
+14. Run the CLI inspection, validation, and rendering commands against the same isolated root.
 
 ## 15. Explicit non-goals and future seams
 

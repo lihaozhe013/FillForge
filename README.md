@@ -8,7 +8,9 @@ The MVP intentionally uses a manual AI handoff: FillForge generates the prompt a
 the user runs them with a multimodal model of choice, and the user pastes the JSON back into the
 application. No model provider is called by the application.
 
-[SPEC.md](SPEC.md) is the normative project specification. This README covers the shortest path from
+[SPEC.md](SPEC.md) is the normative project specification. The detailed
+[User Guide](docs/USER_GUIDE.md) covers Word template authoring, template.yaml configuration,
+extraction JSON, review, rendering, and troubleshooting. This README covers the shortest path from
 checkout to a working development environment.
 
 ## Status
@@ -25,6 +27,7 @@ The MVP vertical slice is implemented and tested:
 - Versioned, filesystem-backed run artifacts and DOCX outputs.
 - CLI commands that reuse the desktop application services.
 - Settings for theme, advanced editor fields, and prompt version.
+- English user documentation available from the Help menu and GitHub.
 
 ## MVP workflow
 
@@ -166,6 +169,16 @@ automation, automatic uploads, or automatic email sending.
 
 Future integrations must use the existing typed service boundaries and preserve the filesystem,
 review, validation, and rendering invariants defined in [SPEC.md](SPEC.md).
+
+## Documentation
+
+The desktop application's Help menu provides:
+
+- [User Guide](https://github.com/lihaozhe013/FillForge/blob/main/docs/USER_GUIDE.md)
+- [Project Specification](https://github.com/lihaozhe013/FillForge/blob/main/SPEC.md)
+- [FillForge on GitHub](https://github.com/lihaozhe013/FillForge)
+
+The User Guide is also available locally at [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ## Privacy
 
