@@ -121,7 +121,7 @@ describe('parseExtractionResult', () => {
   });
 
   it('throws ExtractionParseError for malformed JSON', async () => {
-    const raw = await fs.readFile(path.join(FIXTURES, 'extraction/malformed.json'), 'utf8');
+    const raw = await fs.readFile(path.join(FIXTURES, 'extraction/malformed.txt'), 'utf8');
     expect(() => parseExtractionResult(raw)).toThrow(ExtractionParseError);
   });
 
