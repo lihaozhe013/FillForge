@@ -147,3 +147,6 @@ apps/desktop/out/
 
 # Debug build logs (see AGENTS.md)
 debug-logs/
+
+# macOS metadata
+.DS_Store
