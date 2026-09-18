@@ -2,6 +2,7 @@
   "name": "@fillforge/desktop",
   "version": "0.1.0",
   "private": true,
+  "author": "Haozhe Li",
   "description": "FillForge desktop application (Electron)",
   "main": "out/main/main.js",
   "scripts": {
@@ -10,7 +11,13 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.electron.json && tsc --noEmit -p tsconfig.web.json",
-    "test": "vitest run --root ../.."
+    "test": "vitest run --root ../..",
+    "package": "electron-builder --config electron-builder.yml --publish never",
+    "package:win": "electron-builder --config electron-builder.yml --win nsis --publish never",
+    "package:win:x64": "electron-builder --config electron-builder.yml --win nsis --x64 --publish never",
+    "package:mac": "electron-builder --config electron-builder.yml --mac dmg --publish never",
+    "package:mac:arm64": "electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
+    "package:mac:x64": "electron-builder --config electron-builder.yml --mac dmg --x64 --publish never"
   },
   "dependencies": {
     "@fillforge/core": "workspace:*",
@@ -32,6 +39,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.4.1",
+    "electron-builder": "26.15.3",
     "electron-vite": "^6.0.0-beta.1",
     "vite": "^8.3.0"
   }

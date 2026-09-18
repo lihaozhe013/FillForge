@@ -1,0 +1,262 @@
+name: Build and publish nightly packages
+
+on:
+  push:
+    branches:
+      - publish
+  workflow_dispatch:
+
+concurrency:
+  group: packaging-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '26.8.1'
+  PNPM_VERSION: '12.4.1'
+
+jobs:
+  checks:
+    name: Check and test
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Cache Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key:
+            electron-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/package.json',
+            'pnpm-lock.yaml') }}
+          restore-keys: |
+            electron-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  packages:
+    name: Package ${{ matrix.name }}
+    needs: checks
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-2025
+            platform: windows
+            arch: x64
+          - name: macos-arm64
+            os: macos-15
+            platform: macos
+            arch: arm64
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Cache Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+          key:
+            electron-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/package.json',
+            'pnpm-lock.yaml') }}
+          restore-keys: |
+            electron-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows NSIS installer
+        if: matrix.platform == 'windows'
+        run: pnpm run build:win:${{ matrix.arch }}
+
+      - name: Build macOS DMG
+        if: matrix.platform == 'macos'
+        run: pnpm run build:mac:${{ matrix.arch }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Verify Windows installer
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path apps/desktop/dist -Filter '*-setup.exe' -File)
+          if ($installers.Count -ne 1 -or $installers[0].Length -le 0) {
+            throw "Expected exactly one non-empty Windows installer, found $($installers.Count)."
+          }
+
+      - name: Verify macOS DMG
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          images=(apps/desktop/dist/*.dmg)
+          if (( ${#images[@]} != 1 )) || [[ ! -s "${images[0]}" ]]; then
+            echo "Expected exactly one non-empty macOS DMG, found ${#images[@]}."
+            exit 1
+          fi
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fillforge-${{ matrix.name }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*-setup.exe
+
+  release:
+    name: Publish nightly release
+    if: github.ref == 'refs/heads/publish'
+    needs: packages
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Download platform packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fillforge-*
+          path: staging
+          merge-multiple: true
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          windows_installers=(staging/*-setup.exe)
+          macos_images=(staging/*.dmg)
+          if (( ${#windows_installers[@]} != 1 )) || (( ${#macos_images[@]} != 1 )); then
+            echo "Expected exactly one package per platform, got ${#windows_installers[@]} Windows and ${#macos_images[@]} macOS."
+            exit 1
+          fi
+
+          mkdir -p release-assets
+          cp -- "${windows_installers[0]}" release-assets/fillforge-windows-x64-setup.exe
+          cp -- "${macos_images[0]}" release-assets/fillforge-macos-arm64.dmg
+          (
+            cd release-assets
+            shasum -a 256 fillforge-windows-x64-setup.exe fillforge-macos-arm64.dmg \
+              > SHA256SUMS.txt
+          )
+
+      - name: Update nightly tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag_lookup_ref="repos/${REPOSITORY}/git/ref/tags/nightly"
+          tag_update_ref="repos/${REPOSITORY}/git/refs/tags/nightly"
+          if gh api "${tag_lookup_ref}" >/dev/null 2>&1; then
+            gh api --method PATCH "${tag_update_ref}" \
+              -f "sha=${COMMIT_SHA}" \
+              -F force=true >/dev/null
+          else
+            gh api --method POST "repos/${REPOSITORY}/git/refs" \
+              -f ref=refs/tags/nightly \
+              -f "sha=${COMMIT_SHA}" >/dev/null
+          fi
+
+      - name: Replace nightly release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          releases_api="repos/${REPOSITORY}/releases"
+          release_body="Automated nightly build for commit ${COMMIT_SHA}."
+          release_body+=$'\n\nUnsigned development artifacts for macOS and Windows.\n\nSHA-256 checksums are included in `SHA256SUMS.txt`.'
+
+          if release_id="$(gh api "${releases_api}/tags/nightly" --jq '.id' 2>/dev/null)"; then
+            gh api --method PATCH "${releases_api}/${release_id}" \
+              -f name="FillForge Nightly" \
+              -f "body=${release_body}" \
+              -F draft=true \
+              -F prerelease=true \
+              -f make_latest=false >/dev/null
+          else
+            release_id="$(gh api --method POST "${releases_api}" \
+              -f tag_name=nightly \
+              -f name="FillForge Nightly" \
+              -f "body=${release_body}" \
+              -F draft=true \
+              -F prerelease=true \
+              -f make_latest=false \
+              --jq '.id')"
+          fi
+
+          asset_ids="$(gh api --paginate "${releases_api}/${release_id}/assets?per_page=100" --jq '.[].id')"
+          while IFS= read -r asset_id; do
+            if [[ -n "${asset_id}" ]]; then
+              gh api --method DELETE "${releases_api}/assets/${asset_id}" >/dev/null
+            fi
+          done <<< "${asset_ids}"
+
+          gh release upload nightly \
+            release-assets/fillforge-windows-x64-setup.exe \
+            release-assets/fillforge-macos-arm64.dmg \
+            release-assets/SHA256SUMS.txt \
+            --repo "${REPOSITORY}" \
+            --clobber
+
+          gh api --method PATCH "${releases_api}/${release_id}" \
+            -F draft=false \
+            -F prerelease=true \
+            -f make_latest=false >/dev/null

@@ -1,0 +1,36 @@
+appId: com.fillforge.desktop
+productName: FillForge
+copyright: Copyright © 2026 Haozhe Li
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  # Workspace packages are bundled into out/main by electron-vite.
+  - '!node_modules/@fillforge/**'
+asar: true
+mac:
+  artifactName: FillForge-mac-${arch}-${version}.${ext}
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  target:
+    - dmg
+win:
+  executableName: fillforge
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: FillForge-win-${arch}-${version}.${ext}
+nsis:
+  artifactName: FillForge-win-${arch}-${version}-setup.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  perMachine: false
+dmg:
+  artifactName: FillForge-mac-${arch}-${version}.${ext}
+publish: null

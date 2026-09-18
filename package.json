@@ -2,6 +2,7 @@
   "name": "fillforge",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.4.1",
   "type": "module",
   "description": "Local-first desktop app for configuring, filling, reviewing, and rendering DOCX templates",
   "engines": {
@@ -16,6 +17,11 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "build:win": "pnpm build && pnpm --filter @fillforge/desktop package:win",
+    "build:win:x64": "pnpm build && pnpm --filter @fillforge/desktop package:win:x64",
+    "build:mac": "pnpm build && pnpm --filter @fillforge/desktop package:mac",
+    "build:mac:arm64": "pnpm build && pnpm --filter @fillforge/desktop package:mac:arm64",
+    "build:mac:x64": "pnpm build && pnpm --filter @fillforge/desktop package:mac:x64",
     "fixtures": "tsx tests/fixtures/make-fixtures.ts && tsx examples/make-example.ts"
   },
   "devDependencies": {
