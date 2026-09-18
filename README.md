@@ -188,10 +188,14 @@ review, validation, and rendering invariants defined in [SPEC.md](SPEC.md).
 The desktop application's Help menu provides:
 
 - [User Guide](https://github.com/lihaozhe013/FillForge/blob/main/docs/USER_GUIDE.md)
+- [AI Agent Prompt](https://github.com/lihaozhe013/FillForge/blob/main/docs/AI_AGENT_PROMPT.md)
 - [Project Specification](https://github.com/lihaozhe013/FillForge/blob/main/SPEC.md)
 - [FillForge on GitHub](https://github.com/lihaozhe013/FillForge)
 
-The User Guide is also available locally at [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+The User Guide is also available locally at [docs/USER_GUIDE.md](docs/USER_GUIDE.md). The AI Agent
+Prompt is a self-contained super prompt that lets a coding agent analyze an existing Word document
+and generate the complete template pair (DOCX + template.yaml) directly into the FillForge data
+directory, leaving only acceptance to be done in the application.
 
 ## Privacy
 

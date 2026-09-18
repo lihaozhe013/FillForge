@@ -151,6 +151,7 @@
   },
   "settings": {
     "title": "Settings",
+    "loading": "Loading settings…",
     "application": "Application",
     "theme": "Theme",
     "themeSystem": "System",
@@ -214,6 +215,7 @@
   "menu": {
     "help": "Help",
     "userGuide": "User Guide",
+    "aiAgentPrompt": "AI Agent Prompt",
     "projectSpecification": "Project Specification",
     "onGithub": "FillForge on GitHub",
     "importDocxTitle": "Import DOCX template",

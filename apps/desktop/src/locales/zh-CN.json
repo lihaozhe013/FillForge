@@ -215,6 +215,7 @@
   "menu": {
     "help": "帮助",
     "userGuide": "用户指南",
+    "aiAgentPrompt": "AI Agent 提示词",
     "projectSpecification": "项目规格说明",
     "onGithub": "在 GitHub 上查看 FillForge",
     "importDocxTitle": "导入 DOCX 模板",

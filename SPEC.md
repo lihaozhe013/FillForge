@@ -50,20 +50,20 @@ The MVP MUST support this complete local workflow:
 
 ### 2.2 MVP requirement matrix
 
-| ID        | Requirement                                                                   | Status      |
-| --------- | ----------------------------------------------------------------------------- | ----------- |
-| FF-MVP-01 | Electron desktop application with React, Vite, and typed preload IPC          | Implemented |
-| FF-MVP-02 | DOCX import and run-safe placeholder inspection                               | Implemented |
-| FF-MVP-03 | YAML-backed template and field configuration                                  | Implemented |
-| FF-MVP-04 | Deterministic prompt and expected JSON generation                             | Implemented |
-| FF-MVP-05 | Manual JSON extraction import with schema and semantic validation             | Implemented |
-| FF-MVP-06 | Immutable original extraction plus separate human review                      | Implemented |
-| FF-MVP-07 | Normalization, business validation, binding transforms, and DOCX rendering    | Implemented |
-| FF-MVP-08 | Versioned run artifacts and restart-safe history                              | Implemented |
-| FF-MVP-09 | Application settings for theme, editor options, and prompt version            | Implemented |
-| FF-MVP-10 | CLI access to inspection, prompt generation, validation, and rendering        | Implemented |
-| FF-MVP-11 | Native Help menu with links to the User Guide, specification, and repository  | Implemented |
-| FF-MVP-12 | Direct model calls, agent runtime, MCP server, cloud sync, and authentication | Deferred    |
+| ID        | Requirement                                                                                   | Status      |
+| --------- | --------------------------------------------------------------------------------------------- | ----------- |
+| FF-MVP-01 | Electron desktop application with React, Vite, and typed preload IPC                          | Implemented |
+| FF-MVP-02 | DOCX import and run-safe placeholder inspection                                               | Implemented |
+| FF-MVP-03 | YAML-backed template and field configuration                                                  | Implemented |
+| FF-MVP-04 | Deterministic prompt and expected JSON generation                                             | Implemented |
+| FF-MVP-05 | Manual JSON extraction import with schema and semantic validation                             | Implemented |
+| FF-MVP-06 | Immutable original extraction plus separate human review                                      | Implemented |
+| FF-MVP-07 | Normalization, business validation, binding transforms, and DOCX rendering                    | Implemented |
+| FF-MVP-08 | Versioned run artifacts and restart-safe history                                              | Implemented |
+| FF-MVP-09 | Application settings for theme, editor options, and prompt version                            | Implemented |
+| FF-MVP-10 | CLI access to inspection, prompt generation, validation, and rendering                        | Implemented |
+| FF-MVP-11 | Native Help menu with links to the User Guide, AI Agent Prompt, specification, and repository | Implemented |
+| FF-MVP-12 | Direct model calls, agent runtime, MCP server, cloud sync, and authentication                 | Deferred    |
 
 A feature is not considered part of the MVP merely because an interface or future seam exists.
 
@@ -785,11 +785,12 @@ The renderer MUST NOT be given a general-purpose file read/write API.
 The desktop application MUST install a native application menu with a Help submenu. Help MUST
 provide these entries:
 
-| Menu item             | Destination                                                           |
-| --------------------- | --------------------------------------------------------------------- |
-| User Guide            | https://github.com/lihaozhe013/FillForge/blob/main/docs/USER_GUIDE.md |
-| Project Specification | https://github.com/lihaozhe013/FillForge/blob/main/SPEC.md            |
-| FillForge on GitHub   | https://github.com/lihaozhe013/FillForge                              |
+| Menu item             | Destination                                                                |
+| --------------------- | -------------------------------------------------------------------------- |
+| User Guide            | https://github.com/lihaozhe013/FillForge/blob/main/docs/USER_GUIDE.md      |
+| AI Agent Prompt       | https://github.com/lihaozhe013/FillForge/blob/main/docs/AI_AGENT_PROMPT.md |
+| Project Specification | https://github.com/lihaozhe013/FillForge/blob/main/SPEC.md                 |
+| FillForge on GitHub   | https://github.com/lihaozhe013/FillForge                                   |
 
 Each entry MUST open its destination with the operating system's external browser through Electron
 shell integration. The Help menu MUST NOT read arbitrary local files or expose a filesystem API to

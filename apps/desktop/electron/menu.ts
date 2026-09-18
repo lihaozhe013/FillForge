@@ -4,6 +4,7 @@ import { t } from './i18n';
 export const FILLFORGE_REPOSITORY_URL = 'https://github.com/lihaozhe013/FillForge';
 export const USER_GUIDE_URL = `${FILLFORGE_REPOSITORY_URL}/blob/main/docs/USER_GUIDE.md`;
 export const SPECIFICATION_URL = `${FILLFORGE_REPOSITORY_URL}/blob/main/SPEC.md`;
+export const AI_AGENT_PROMPT_URL = `${FILLFORGE_REPOSITORY_URL}/blob/main/docs/AI_AGENT_PROMPT.md`;
 
 export function installApplicationMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -18,6 +19,12 @@ export function installApplicationMenu(): void {
           label: t('menu.userGuide'),
           click: () => {
             void shell.openExternal(USER_GUIDE_URL);
+          }
+        },
+        {
+          label: t('menu.aiAgentPrompt'),
+          click: () => {
+            void shell.openExternal(AI_AGENT_PROMPT_URL);
           }
         },
         {
