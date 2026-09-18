@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { extractError } from '../hooks/useAsyncData';
 import type { AppErrorDtoLike } from '../lib/ipc-protocol';
 
@@ -8,13 +9,14 @@ export function ErrorBanner({
   error: AppErrorDtoLike | null;
   onDismiss?: () => void;
 }) {
+  const { t } = useTranslation();
   if (!error) {
     return null;
   }
   return (
     <div className="error-banner" role="alert">
       <div>
-        <strong>{error.code}</strong> — {error.message}
+        <strong>{error.code}</strong> — {t(`errors.codes.${error.code}`, error.message)}
         {Array.isArray(error.details) && error.details.length > 0 && (
           <ul>
             {error.details.slice(0, 12).map((detail) => (
@@ -29,7 +31,7 @@ export function ErrorBanner({
       </div>
       {onDismiss && (
         <button className="link" onClick={onDismiss}>
-          dismiss
+          {t('common.dismiss')}
         </button>
       )}
     </div>
@@ -41,7 +43,8 @@ export function extractFromUnknown(error: unknown) {
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  return <span className={`badge badge-${status}`}>{status}</span>;
+  const { t } = useTranslation();
+  return <span className={`badge badge-${status}`}>{t(`status.${status}`, status)}</span>;
 }
 
 export function Section({

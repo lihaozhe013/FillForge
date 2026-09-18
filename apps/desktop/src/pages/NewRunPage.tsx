@@ -1,5 +1,6 @@
 import type { TemplateSummary } from '@fillforge/schema';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
 import { extractError, useAsyncData } from '../hooks/useAsyncData';
@@ -11,6 +12,7 @@ export function NewRunPage({
   initialTemplateId?: string;
   navigate: Navigate;
 }) {
+  const { t } = useTranslation();
   const templates = useAsyncData(() => window.fillforge.templates.list(), []);
   const [selected, setSelected] = useState(initialTemplateId ?? '');
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
@@ -41,13 +43,13 @@ export function NewRunPage({
   return (
     <div className="page">
       <header className="page-header">
-        <h1>New run</h1>
+        <h1>{t('newRun.title')}</h1>
       </header>
 
       <ErrorBanner error={error ?? templates.error} />
 
-      <Section title="1. Select a template">
-        {templates.loading && <p className="empty-hint">Loading…</p>}
+      <Section title={t('newRun.step1')}>
+        {templates.loading && <p className="empty-hint">{t('common.loading')}</p>}
         <ul className="list">
           {templatesWithoutDocument.map((template) => (
             <li key={template.id}>
@@ -67,18 +69,17 @@ export function NewRunPage({
           ))}
         </ul>
         {templatesWithoutDocument.length === 0 && !templates.loading && (
-          <p className="empty-hint">Import a template first.</p>
+          <p className="empty-hint">{t('newRun.empty')}</p>
         )}
       </Section>
 
-      <Section title="2. Create the run">
+      <Section title={t('newRun.step2')}>
         <p className="muted">
-          A run is a self-contained directory under <code>~/.local/fillforge/runs/&lt;id&gt;/</code>
-          . You can attach source images or PDFs to it afterwards; they are copied into the run and
-          never modified.
+          {t('newRun.descriptionBefore')} <code>~/.local/fillforge/runs/&lt;id&gt;/</code>
+          {t('newRun.descriptionAfter')}
         </p>
         <button className="primary" disabled={!selected || busy} onClick={() => void createRun()}>
-          {busy ? 'Creating…' : 'Create run'}
+          {busy ? t('newRun.creating') : t('newRun.create')}
         </button>
       </Section>
     </div>

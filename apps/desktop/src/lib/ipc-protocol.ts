@@ -66,6 +66,7 @@ export interface CreateRunDto {
 
 export interface SettingsUpdateDto {
   theme: ResolvedAppConfig['theme'];
+  language: ResolvedAppConfig['language'];
   showAdvancedFields: boolean;
   promptVersion: string;
 }

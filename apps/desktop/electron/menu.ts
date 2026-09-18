@@ -1,4 +1,5 @@
 import { Menu, shell } from 'electron';
+import { t } from './i18n';
 
 export const FILLFORGE_REPOSITORY_URL = 'https://github.com/lihaozhe013/FillForge';
 export const USER_GUIDE_URL = `${FILLFORGE_REPOSITORY_URL}/blob/main/docs/USER_GUIDE.md`;
@@ -11,23 +12,23 @@ export function installApplicationMenu(): void {
     { role: 'editMenu' },
     { role: 'viewMenu' },
     {
-      label: 'Help',
+      label: t('menu.help'),
       submenu: [
         {
-          label: 'User Guide',
+          label: t('menu.userGuide'),
           click: () => {
             void shell.openExternal(USER_GUIDE_URL);
           }
         },
         {
-          label: 'Project Specification',
+          label: t('menu.projectSpecification'),
           click: () => {
             void shell.openExternal(SPECIFICATION_URL);
           }
         },
         { type: 'separator' },
         {
-          label: 'FillForge on GitHub',
+          label: t('menu.onGithub'),
           click: () => {
             void shell.openExternal(FILLFORGE_REPOSITORY_URL);
           }

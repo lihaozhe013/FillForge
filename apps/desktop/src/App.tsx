@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HomePage } from './pages/HomePage';
 import { NewRunPage } from './pages/NewRunPage';
 import { RunPage } from './pages/RunPage';
@@ -6,6 +7,7 @@ import { RunsPage } from './pages/RunsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TemplateEditorPage } from './pages/TemplateEditorPage';
 import { TemplatesPage } from './pages/TemplatesPage';
+import { applyLanguage } from './lib/i18n';
 
 export type Route =
   | { page: 'home' }
@@ -20,6 +22,7 @@ export type Navigate = (route: Route) => void;
 
 export function App() {
   const [route, setRoute] = useState<Route>({ page: 'home' });
+  const { t } = useTranslation();
 
   const navigate = useCallback<Navigate>((next) => setRoute(next), []);
 
@@ -30,6 +33,7 @@ export function App() {
       .then((config) => {
         if (!cancelled) {
           document.documentElement.dataset.theme = config.theme;
+          applyLanguage(config.language);
         }
       })
       .catch(() => {});
@@ -52,7 +56,7 @@ export function App() {
             className={route.page === 'home' ? 'nav-item active' : 'nav-item'}
             onClick={() => navigate({ page: 'home' })}
           >
-            Home
+            {t('nav.home')}
           </button>
           <button
             className={
@@ -62,7 +66,7 @@ export function App() {
             }
             onClick={() => navigate({ page: 'templates' })}
           >
-            Templates
+            {t('nav.templates')}
           </button>
           <button
             className={
@@ -70,16 +74,16 @@ export function App() {
             }
             onClick={() => navigate({ page: 'runs' })}
           >
-            Runs
+            {t('nav.runs')}
           </button>
           <button
             className={route.page === 'settings' ? 'nav-item active' : 'nav-item'}
             onClick={() => navigate({ page: 'settings' })}
           >
-            Settings
+            {t('nav.settings')}
           </button>
         </nav>
-        <div className="sidebar-footer">Local-first · files stay on this machine</div>
+        <div className="sidebar-footer">{t('common.tagline')}</div>
       </aside>
       <main className="content">
         {route.page === 'home' && <HomePage navigate={navigate} />}

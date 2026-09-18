@@ -1,10 +1,13 @@
 import type { ResolvedAppConfig } from '@fillforge/schema';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
 import { extractError, useAsyncData } from '../hooks/useAsyncData';
+import { applyLanguage } from '../lib/i18n';
 
 export function SettingsPage({ navigate }: { navigate: Navigate }) {
+  const { t } = useTranslation();
   const loaded = useAsyncData(() => window.fillforge.settings.load(), []);
   const [draft, setDraft] = useState<ResolvedAppConfig | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
@@ -20,6 +23,7 @@ export function SettingsPage({ navigate }: { navigate: Navigate }) {
   useEffect(() => {
     if (draft) {
       document.documentElement.dataset.theme = draft.theme;
+      applyLanguage(draft.language);
     }
   }, [draft]);
 
@@ -41,7 +45,7 @@ export function SettingsPage({ navigate }: { navigate: Navigate }) {
     return (
       <div className="page">
         <ErrorBanner error={error ?? loaded.error} />
-        <p className="empty-hint">Loading settings…</p>
+        <p className="empty-hint">{t('settings.loading')}</p>
       </div>
     );
   }
@@ -49,20 +53,37 @@ export function SettingsPage({ navigate }: { navigate: Navigate }) {
   return (
     <div className="page">
       <header className="page-header">
-        <h1>Settings</h1>
+        <h1>{t('settings.title')}</h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: 'home' })}>Home</button>
+          <button onClick={() => navigate({ page: 'home' })}>{t('nav.home')}</button>
           <button className="primary" disabled={busy} onClick={() => void save()}>
-            {saved ? 'Saved ✓' : 'Save'}
+            {saved ? t('common.saved') : t('common.save')}
           </button>
         </div>
       </header>
 
       <ErrorBanner error={error} />
-      <Section title="Application">
+      <Section title={t('settings.application')}>
         <div className="form-grid">
           <label>
-            Theme
+            {t('settings.language')}
+            <select
+              value={draft.language}
+              onChange={(event) => {
+                setSaved(false);
+                setDraft({
+                  ...draft,
+                  language: event.target.value as ResolvedAppConfig['language']
+                });
+              }}
+            >
+              <option value="system">{t('settings.languageSystem')}</option>
+              <option value="en">{t('settings.languageEn')}</option>
+              <option value="zh-CN">{t('settings.languageZh')}</option>
+            </select>
+          </label>
+          <label>
+            {t('settings.theme')}
             <select
               value={draft.theme}
               onChange={(event) => {
@@ -70,13 +91,13 @@ export function SettingsPage({ navigate }: { navigate: Navigate }) {
                 setDraft({ ...draft, theme: event.target.value as ResolvedAppConfig['theme'] });
               }}
             >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+              <option value="system">{t('settings.themeSystem')}</option>
+              <option value="light">{t('settings.themeLight')}</option>
+              <option value="dark">{t('settings.themeDark')}</option>
             </select>
           </label>
           <label>
-            Prompt version
+            {t('settings.promptVersion')}
             <input
               value={draft.promptVersion}
               onChange={(event) => {
@@ -94,12 +115,12 @@ export function SettingsPage({ navigate }: { navigate: Navigate }) {
                 setDraft({ ...draft, showAdvancedFields: event.target.checked });
               }}
             />
-            Show advanced field settings
+            {t('settings.showAdvanced')}
           </label>
         </div>
         <p className="muted">
-          Settings are stored in <code>~/.config/fillforge/config.yaml</code>. New runs use the
-          selected prompt version.
+          {t('settings.storedBefore')} <code>~/.config/fillforge/config.yaml</code>
+          {t('settings.storedAfter')}
         </p>
       </Section>
     </div>

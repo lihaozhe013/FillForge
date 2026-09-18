@@ -15,6 +15,7 @@ describe('FileConfigRepository', () => {
     const repository = await createRepository();
     expect(await repository.loadResolved()).toEqual({
       theme: 'system',
+      language: 'system',
       showAdvancedFields: false,
       promptVersion: 'fillforge-extraction-v1'
     });
@@ -25,7 +26,7 @@ describe('FileConfigRepository', () => {
     const repository = await createRepository();
     await repository.save({
       schema_version: 1,
-      ui: { theme: 'dark' },
+      ui: { theme: 'dark', language: 'zh-CN' },
       editor: { show_advanced_fields: true },
       extraction: { prompt_version: 'custom-v2' }
     });
@@ -33,6 +34,7 @@ describe('FileConfigRepository', () => {
     expect(text).toContain('schema_version: 1');
     expect(await repository.loadResolved()).toEqual({
       theme: 'dark',
+      language: 'zh-CN',
       showAdvancedFields: true,
       promptVersion: 'custom-v2'
     });

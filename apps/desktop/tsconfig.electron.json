@@ -7,6 +7,7 @@
     "electron",
     "electron.vite.config.ts",
     "src/lib/ipc-protocol.ts",
-    "src/lib/global.d.ts"
+    "src/lib/global.d.ts",
+    "src/locales/*.json"
   ]
 }

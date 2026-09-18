@@ -12,7 +12,9 @@ import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { z } from 'zod';
 import type { AppErrorDtoLike, IpcResult } from '../../src/lib/ipc-protocol';
 import { IPC } from '../../src/lib/ipc-protocol';
+import { applyLanguage, t } from '../i18n';
 import { logAppEvent, logDebug } from '../logger';
+import { installApplicationMenu } from '../menu';
 import type { AppServices } from '../services';
 import {
   emptyPayloadSchema,
@@ -101,8 +103,8 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.templatesImport, emptyPayloadSchema, async () => {
     const filePaths = await showOpenDialog({
-      title: 'Import DOCX template',
-      filters: [{ name: 'Word Documents', extensions: ['docx'] }],
+      title: t('menu.importDocxTitle'),
+      filters: [{ name: t('menu.wordDocuments'), extensions: ['docx'] }],
       properties: ['openFile']
     });
     if (!filePaths) {
@@ -154,12 +156,14 @@ export function registerIpcHandlers(services: AppServices): void {
   handle(IPC.settingsSave, settingsSaveSchema, async (input) => {
     await configRepository.save({
       schema_version: 1,
-      ui: { theme: input.theme },
+      ui: { theme: input.theme, language: input.language },
       editor: { show_advanced_fields: input.showAdvancedFields },
       extraction: { prompt_version: input.promptVersion }
     });
     const config = await configRepository.loadResolved();
     runService.setPromptVersion(config.promptVersion);
+    applyLanguage(config.language);
+    installApplicationMenu();
     return config;
   });
 
@@ -188,10 +192,10 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.runsAttachFiles, runsLoadSchema, async ({ id }) => {
     const filePaths = await showOpenDialog({
-      title: 'Attach source material',
+      title: t('menu.attachSourceTitle'),
       filters: [
         {
-          name: 'Evidence',
+          name: t('menu.evidenceFiles'),
           extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'txt', 'md']
         }
       ],
@@ -229,11 +233,11 @@ export function registerIpcHandlers(services: AppServices): void {
     const result = window
       ? await dialog.showSaveDialog(window, {
           defaultPath,
-          filters: [{ name: 'Word Documents', extensions: ['docx'] }]
+          filters: [{ name: t('menu.wordDocuments'), extensions: ['docx'] }]
         })
       : await dialog.showSaveDialog({
           defaultPath,
-          filters: [{ name: 'Word Documents', extensions: ['docx'] }]
+          filters: [{ name: t('menu.wordDocuments'), extensions: ['docx'] }]
         });
     if (result.canceled || !result.filePath) {
       return null;

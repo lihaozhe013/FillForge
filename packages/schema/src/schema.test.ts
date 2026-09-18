@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appConfigSchema, resolveAppConfig } from './config.ts';
+import { appConfigSchema, matchAppLanguage, resolveAppConfig, resolveLocale } from './config.ts';
 import {
   EXTRACTION_STATUS_VALUES,
   extractedFieldSchema,
@@ -222,6 +222,7 @@ describe('appConfigSchema', () => {
     const parsed = appConfigSchema.parse({ schema_version: 1 });
     const resolved = resolveAppConfig(parsed);
     expect(resolved.theme).toBe('system');
+    expect(resolved.language).toBe('system');
     expect(resolved.showAdvancedFields).toBe(false);
     expect(resolved.promptVersion).toBe('fillforge-extraction-v1');
   });
@@ -232,5 +233,22 @@ describe('appConfigSchema', () => {
       ui: { theme: 'neon' }
     });
     expect(result.success).toBe(false);
+  });
+
+  it('rejects unknown languages', () => {
+    const result = appConfigSchema.safeParse({
+      schema_version: 1,
+      ui: { language: 'fr' }
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('matches system locales onto supported languages', () => {
+    expect(matchAppLanguage('zh-TW')).toBe('zh-CN');
+    expect(matchAppLanguage('zh-CN')).toBe('zh-CN');
+    expect(matchAppLanguage('en-GB')).toBe('en');
+    expect(matchAppLanguage('de-DE')).toBe('en');
+    expect(resolveLocale('system', 'zh-CN')).toBe('zh-CN');
+    expect(resolveLocale('en', 'zh-CN')).toBe('en');
   });
 });

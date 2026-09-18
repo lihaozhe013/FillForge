@@ -1,10 +1,12 @@
 import type { ExtractionIssue } from '@fillforge/extraction';
 import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from '@fillforge/schema';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section, StatusBadge } from '../components/ui';
 import { copyToClipboard, extractError, useAsyncData } from '../hooks/useAsyncData';
 import type { AppErrorDtoLike } from '../lib/ipc-protocol';
+import { formatDateTime } from '../lib/i18n';
 
 function displayValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -21,6 +23,7 @@ function inputValue(value: unknown): string {
 }
 
 export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate }) {
+  const { t } = useTranslation();
   const run = useAsyncData(() => window.fillforge.runs.load(runId), [runId]);
   const template = useAsyncData(
     () =>
@@ -90,10 +93,10 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
     <div className="page">
       <header className="page-header">
         <h1>
-          Run <code>{runId}</code>
+          {t('run.title')} <code>{runId}</code>
         </h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: 'runs' })}>All runs</button>
+          <button onClick={() => navigate({ page: 'runs' })}>{t('run.allRuns')}</button>
         </div>
       </header>
 
@@ -102,35 +105,35 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
         <div className="notice-banner">
           {notice}{' '}
           <button className="link" onClick={() => setNotice(null)}>
-            dismiss
+            {t('common.dismiss')}
           </button>
         </div>
       )}
 
       {metadata && (
-        <Section title="Run">
+        <Section title={t('run.title')}>
           <div className="report">
             <div>
-              Template: <code>{metadata.template_id}</code> · Created:{' '}
-              {new Date(metadata.created_at).toLocaleString()} · Prompt version:{' '}
+              {t('run.templateLabel')} <code>{metadata.template_id}</code> · {t('run.createdLabel')}{' '}
+              {formatDateTime(metadata.created_at)} · {t('run.promptVersionLabel')}{' '}
               <code>{metadata.prompt_version}</code>
             </div>
             <div>
-              Directory: <code>~/.local/fillforge/runs/{metadata.id}/</code>
+              {t('run.directoryLabel')} <code>~/.local/fillforge/runs/{metadata.id}/</code>
             </div>
           </div>
         </Section>
       )}
 
       <Section
-        title="Source materials"
+        title={t('run.sourceMaterials')}
         actions={
           <button
             className="link"
             disabled={busy}
             onClick={() => void act(() => window.fillforge.runs.attachFiles(runId))}
           >
-            attach files
+            {t('run.attachFiles')}
           </button>
         }
       >
@@ -141,7 +144,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
               <span className="muted">
                 ({attachment.media_type}
                 {attachment.original_filename !== attachment.filename
-                  ? `, from ${attachment.original_filename}`
+                  ? t('run.attachmentFrom', { name: attachment.original_filename })
                   : ''}
                 )
               </span>
@@ -149,14 +152,12 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
           ))}
         </ul>
         {(metadata?.attachments.length ?? 0) === 0 && (
-          <p className="empty-hint">
-            Optional. Attach evidence (invoice photos, PDFs) to keep it with the run.
-          </p>
+          <p className="empty-hint">{t('run.attachmentsEmpty')}</p>
         )}
       </Section>
 
       <Section
-        title="1. Extraction prompt"
+        title={t('run.step1')}
         actions={
           run.data && (
             <>
@@ -164,10 +165,13 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 <button
                   disabled={busy}
                   onClick={() =>
-                    void act(() => window.fillforge.runs.generatePrompt(runId), 'Prompt generated.')
+                    void act(
+                      () => window.fillforge.runs.generatePrompt(runId),
+                      t('run.promptGenerated')
+                    )
                   }
                 >
-                  Generate prompt
+                  {t('run.generatePrompt')}
                 </button>
               )}
               {run.data.prompt && (
@@ -175,7 +179,7 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                   className="link"
                   onClick={() => void copyToClipboard(run.data?.prompt ?? '')}
                 >
-                  copy prompt
+                  {t('common.copyPrompt')}
                 </button>
               )}
             </>
@@ -187,36 +191,32 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
             <pre className="prompt-preview">{run.data.prompt}</pre>
             {run.data.expectedJson && (
               <>
-                <h3>Expected JSON structure</h3>
+                <h3>{t('common.expectedJsonTitle')}</h3>
                 <pre className="prompt-preview">{run.data.expectedJson}</pre>
                 <button
                   className="link"
                   onClick={() => void copyToClipboard(run.data?.expectedJson ?? '')}
                 >
-                  copy expected JSON
+                  {t('common.copyExpectedJson')}
                 </button>
               </>
             )}
           </>
         ) : (
-          <p className="empty-hint">
-            Generate the prompt, paste it together with your documents into any AI, then import the
-            JSON it returns below.
-          </p>
+          <p className="empty-hint">{t('run.promptEmpty')}</p>
         )}
       </Section>
 
-      <Section title="2. Paste AI result">
+      <Section title={t('run.step2')}>
         {extraction ? (
           <p className="muted">
-            The extraction has been imported and is immutable. Use the review table below to make
-            corrections; the original model values remain in <code>extraction.json</code>.
+            {t('run.importedBefore')} <code>extraction.json</code>.
           </p>
         ) : (
           <>
             <textarea
               rows={8}
-              placeholder={`Paste the JSON returned by the AI, e.g.\n{\n  "invoice_number": {\n    "value": "12345678",\n    "status": "found",\n    "evidence": "invoice number"\n  }\n}`}
+              placeholder={`${t('run.pastePlaceholder')}\n{\n  "invoice_number": {\n    "value": "12345678",\n    "status": "found",\n    "evidence": "invoice number"\n  }\n}`}
               value={rawPaste}
               onChange={(event) => setRawPaste(event.target.value)}
             />
@@ -228,25 +228,29 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                   const succeeded = await act(async () => {
                     const imported = await window.fillforge.runs.importExtraction(runId, rawPaste);
                     setIssues(imported.issues);
-                  }, 'Extraction imported. Review the values below.');
+                  }, t('run.importedNotice'));
                   if (succeeded) {
                     setRawPaste('');
                     setFinalValues({});
                   }
                 }}
               >
-                Import extraction
+                {t('run.importExtraction')}
               </button>
             </div>
           </>
         )}
         {issues.length > 0 && (
           <div className="issue-list">
-            <strong>Validation notes (review before rendering):</strong>
+            <strong>{t('run.validationNotes')}</strong>
             <ul>
               {issues.map((issue) => (
                 <li key={`${issue.field}:${issue.code}:${issue.message}`}>
-                  <code>{issue.field}</code> — {issue.message}
+                  <code>{issue.field}</code> —{' '}
+                  {t(`errors.issues.${issue.code}`, {
+                    field: issue.field,
+                    defaultValue: issue.message
+                  })}
                 </li>
               ))}
             </ul>
@@ -255,15 +259,15 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
       </Section>
 
       {extraction && template.data && (
-        <Section title="3. Review extracted values">
+        <Section title={t('run.step3')}>
           <table className="table review-table">
             <thead>
               <tr>
-                <th>Field</th>
-                <th>AI value</th>
-                <th>Status</th>
-                <th>Evidence</th>
-                <th>Final value</th>
+                <th>{t('run.colField')}</th>
+                <th>{t('run.colAiValue')}</th>
+                <th>{t('run.colStatus')}</th>
+                <th>{t('run.colEvidence')}</th>
+                <th>{t('run.colFinalValue')}</th>
               </tr>
             </thead>
             <tbody>
@@ -290,7 +294,11 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                           setFinalValues({ ...finalValues, [key]: event.target.value })
                         }
                       />
-                      {reviewed && <div className="muted decision">{reviewed.decision}</div>}
+                      {reviewed && (
+                        <div className="muted decision">
+                          {t(`status.${reviewed.decision}`, reviewed.decision)}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -298,8 +306,9 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
             </tbody>
           </table>
           <p className="muted">
-            Editing a value keeps the original AI value untouched: corrections are stored in{' '}
-            <code>review.json</code>, while the model output stays in <code>extraction.json</code>.
+            {t('run.reviewNoteBefore')} <code>review.json</code>
+            {t('run.reviewNoteMiddle')} <code>extraction.json</code>
+            {t('run.reviewNoteAfter')}
           </p>
           <div className="row-actions">
             <button
@@ -309,18 +318,18 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 void act(async () => {
                   const saved = await window.fillforge.runs.saveReview(runId, finalValues);
                   setIssues(saved.issues);
-                }, 'Review saved.')
+                }, t('run.reviewSaved'))
               }
             >
-              Save review
+              {t('run.saveReview')}
             </button>
             <button
               disabled={busy}
               onClick={() =>
-                void act(() => window.fillforge.runs.normalize(runId), 'Normalized values written.')
+                void act(() => window.fillforge.runs.normalize(runId), t('run.normalized'))
               }
             >
-              Normalize
+              {t('run.normalize')}
             </button>
             <button
               disabled={busy}
@@ -328,32 +337,34 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                 void act(async () => {
                   await window.fillforge.runs.normalize(runId);
                   await window.fillforge.runs.render(runId);
-                }, 'Document rendered.')
+                }, t('run.rendered'))
               }
             >
-              Normalize + Render DOCX
+              {t('run.normalizeAndRender')}
             </button>
           </div>
         </Section>
       )}
 
-      <Section title="4. Output">
+      <Section title={t('run.step4')}>
         {(run.data?.outputs.length ?? 0) === 0 ? (
-          <p className="empty-hint">No document rendered yet.</p>
+          <p className="empty-hint">{t('run.empty')}</p>
         ) : (
           <ul className="list">
             {(run.data?.outputs ?? []).map((output) => (
               <li key={output.filename} className="output-row">
                 <span>
                   {output.filename}
-                  {output.filename === 'result.docx' && <span className="muted"> (latest)</span>}
+                  {output.filename === 'result.docx' && (
+                    <span className="muted"> {t('run.latest')}</span>
+                  )}
                 </span>
                 <span className="actions-cell">
                   <button
                     className="link"
                     onClick={() => void act(() => window.fillforge.system.openPath(output.path))}
                   >
-                    Open
+                    {t('common.open')}
                   </button>
                   <button
                     className="link"
@@ -361,18 +372,18 @@ export function RunPage({ runId, navigate }: { runId: string; navigate: Navigate
                       void act(() => window.fillforge.system.showItemInFolder(output.path))
                     }
                   >
-                    Show in folder
+                    {t('run.showInFolder')}
                   </button>
                   <button
                     className="link"
                     onClick={() =>
                       void act(
                         () => window.fillforge.system.exportCopy(output.path),
-                        'Copy exported.'
+                        t('run.exported')
                       )
                     }
                   >
-                    Export copy
+                    {t('run.exportCopy')}
                   </button>
                 </span>
               </li>

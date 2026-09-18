@@ -1,5 +1,6 @@
 import type { FieldDefinition, PlaceholderReport, TemplateSchema } from '@fillforge/schema';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
 import { copyToClipboard, extractError, useAsyncData } from '../hooks/useAsyncData';
@@ -26,6 +27,7 @@ export function TemplateEditorPage({
   templateId: string;
   navigate: Navigate;
 }) {
+  const { t } = useTranslation();
   const loaded = useAsyncData(() => window.fillforge.templates.load(templateId), [templateId]);
   const inspection = useAsyncData(
     () => window.fillforge.templates.inspect(templateId),
@@ -67,7 +69,7 @@ export function TemplateEditorPage({
   if (!draft) {
     return (
       <div className="page">
-        <p className="empty-hint">Loading template…</p>
+        <p className="empty-hint">{t('editor.loading')}</p>
       </div>
     );
   }
@@ -130,24 +132,24 @@ export function TemplateEditorPage({
         <h1>{draft.name}</h1>
         <div className="page-actions">
           <button onClick={() => navigate({ page: 'newRun', templateId: draft.id })}>
-            New run
+            {t('common.newRun')}
           </button>
           <button className="primary" disabled={busy} onClick={() => void save()}>
-            {saved ? 'Saved ✓' : 'Save'}
+            {saved ? t('common.saved') : t('common.save')}
           </button>
         </div>
       </header>
 
       <ErrorBanner error={error ?? inspection.error} />
 
-      <Section title="General">
+      <Section title={t('editor.general')}>
         <div className="form-grid">
           <label>
-            Id
+            {t('editor.id')}
             <input value={draft.id} disabled />
           </label>
           <label>
-            Name
+            {t('editor.name')}
             <input
               value={draft.name}
               onChange={(event) => {
@@ -157,7 +159,7 @@ export function TemplateEditorPage({
             />
           </label>
           <label>
-            Description
+            {t('editor.description')}
             <input
               value={draft.description ?? ''}
               onChange={(event) => {
@@ -172,14 +174,14 @@ export function TemplateEditorPage({
             />
           </label>
           <label>
-            Document
+            {t('editor.document')}
             <input value={draft.document.file} disabled />
           </label>
         </div>
       </Section>
 
       <Section
-        title="DOCX placeholders"
+        title={t('editor.placeholders')}
         actions={
           <button
             className="link"
@@ -187,30 +189,31 @@ export function TemplateEditorPage({
               inspection.reload();
             }}
           >
-            re-inspect
+            {t('editor.reInspect')}
           </button>
         }
       >
         {report && (
           <div className="report">
             <div>
-              Detected: <code>{report.placeholders.join(', ') || 'none'}</code>
+              {t('editor.detected')}{' '}
+              <code>{report.placeholders.join(', ') || t('editor.noneValue')}</code>
             </div>
             {report.unconfigured.length > 0 && (
               <div className="warn-text">
-                Not bound yet: <code>{report.unconfigured.join(', ')}</code>
+                {t('editor.notBoundYet')} <code>{report.unconfigured.join(', ')}</code>
               </div>
             )}
             {report.unreferenced.length > 0 && (
               <div className="warn-text">
-                Configured but unreferenced: <code>{report.unreferenced.join(', ')}</code>
+                {t('editor.unreferenced')} <code>{report.unreferenced.join(', ')}</code>
               </div>
             )}
           </div>
         )}
       </Section>
 
-      <Section title={`Fields (${Object.keys(draft.fields).length})`}>
+      <Section title={t('editor.fields', { total: Object.keys(draft.fields).length })}>
         <div className="field-list">
           {Object.entries(draft.fields).map(([key, field]) => (
             <div className="field-card" key={key}>
@@ -225,19 +228,19 @@ export function TemplateEditorPage({
                     setDraft({ ...draft, fields });
                   }}
                 >
-                  remove field
+                  {t('editor.removeField')}
                 </button>
               </div>
               <div className="form-grid">
                 <label>
-                  Display name (label)
+                  {t('editor.displayName')}
                   <input
                     value={field.label}
                     onChange={(event) => updateField(key, { label: event.target.value })}
                   />
                 </label>
                 <label>
-                  Meaning (description)
+                  {t('editor.meaning')}
                   <input
                     value={field.description ?? ''}
                     onChange={(event) =>
@@ -248,7 +251,7 @@ export function TemplateEditorPage({
                   />
                 </label>
                 <label>
-                  Type
+                  {t('editor.type')}
                   <select
                     value={field.type}
                     onChange={(event) =>
@@ -268,10 +271,10 @@ export function TemplateEditorPage({
                     checked={field.required}
                     onChange={(event) => updateField(key, { required: event.target.checked })}
                   />
-                  Required
+                  {t('editor.required')}
                 </label>
                 <label className="span-2">
-                  AI extraction instruction
+                  {t('editor.extractionInstruction')}
                   <textarea
                     rows={2}
                     value={field.extraction?.instruction ?? ''}
@@ -286,7 +289,7 @@ export function TemplateEditorPage({
                   />
                 </label>
                 <label>
-                  Validation regex
+                  {t('editor.validationRegex')}
                   <input
                     value={field.validation?.regex ?? ''}
                     placeholder="^[0-9A-Za-z-]+$"
@@ -294,7 +297,7 @@ export function TemplateEditorPage({
                   />
                 </label>
                 <label>
-                  Minimum
+                  {t('editor.minimum')}
                   <input
                     type="number"
                     value={field.validation?.minimum ?? ''}
@@ -313,7 +316,7 @@ export function TemplateEditorPage({
                   />
                 </label>
                 <label>
-                  Maximum
+                  {t('editor.maximum')}
                   <input
                     type="number"
                     value={field.validation?.maximum ?? ''}
@@ -332,7 +335,7 @@ export function TemplateEditorPage({
                   />
                 </label>
                 <label>
-                  Enum values (comma-separated)
+                  {t('editor.enumValues')}
                   <input
                     value={field.validation?.enum?.join(', ') ?? ''}
                     onChange={(event) =>
@@ -348,7 +351,7 @@ export function TemplateEditorPage({
                   />
                 </label>
                 <label>
-                  Validation date format
+                  {t('editor.validationDateFormat')}
                   <input
                     value={field.validation?.date_format ?? ''}
                     placeholder="YYYY-MM-DD"
@@ -357,7 +360,7 @@ export function TemplateEditorPage({
                   />
                 </label>
                 <label>
-                  Output date format
+                  {t('editor.outputDateFormat')}
                   <input
                     value={field.output?.format ?? ''}
                     placeholder="YYYY-MM-DD"
@@ -380,7 +383,7 @@ export function TemplateEditorPage({
                       })
                     }
                   />
-                  Normalize: trim
+                  {t('editor.normalizeTrim')}
                 </label>
                 <label className="checkbox">
                   <input
@@ -395,7 +398,7 @@ export function TemplateEditorPage({
                       })
                     }
                   />
-                  Normalize: remove spaces
+                  {t('editor.normalizeRemoveSpaces')}
                 </label>
               </div>
             </div>
@@ -415,13 +418,13 @@ export function TemplateEditorPage({
         />
       </Section>
 
-      <Section title="Bindings (DOCX placeholder ← business field)">
+      <Section title={t('editor.bindings')}>
         <table className="table">
           <thead>
             <tr>
-              <th>DOCX placeholder</th>
-              <th>Source field</th>
-              <th>Transform</th>
+              <th>{t('editor.colPlaceholder')}</th>
+              <th>{t('editor.colSourceField')}</th>
+              <th>{t('editor.colTransform')}</th>
             </tr>
           </thead>
           <tbody>
@@ -450,7 +453,7 @@ export function TemplateEditorPage({
                         setDraft({ ...draft, bindings });
                       }}
                     >
-                      <option value="">— not bound —</option>
+                      <option value="">{t('editor.notBound')}</option>
                       {Object.keys(draft.fields).map((fieldKey) => (
                         <option key={fieldKey} value={fieldKey}>
                           {fieldKey}
@@ -476,7 +479,7 @@ export function TemplateEditorPage({
                     >
                       {TRANSFORMS.map((transform) => (
                         <option key={transform} value={transform}>
-                          {transform === '' ? '(none)' : transform}
+                          {transform === '' ? t('editor.transformNone') : transform}
                         </option>
                       ))}
                     </select>
@@ -489,37 +492,33 @@ export function TemplateEditorPage({
       </Section>
 
       <Section
-        title="Prompt preview"
+        title={t('editor.promptPreview')}
         actions={
           preview.data && (
             <button
               className="link"
               onClick={() => void copyToClipboard(preview.data?.prompt ?? '')}
             >
-              copy prompt
+              {t('common.copyPrompt')}
             </button>
           )
         }
       >
-        {preview.loading && <p className="empty-hint">Loading…</p>}
+        {preview.loading && <p className="empty-hint">{t('common.loading')}</p>}
         {preview.data ? (
           <>
             <pre className="prompt-preview">{preview.data.prompt}</pre>
-            <h3>Expected JSON structure</h3>
+            <h3>{t('common.expectedJsonTitle')}</h3>
             <pre className="prompt-preview">{preview.data.expectedJson}</pre>
             <button
               className="link"
               onClick={() => void copyToClipboard(preview.data?.expectedJson ?? '')}
             >
-              copy expected JSON
+              {t('common.copyExpectedJson')}
             </button>
           </>
         ) : (
-          !preview.loading && (
-            <p className="empty-hint">
-              Configure at least one field to generate the extraction prompt.
-            </p>
-          )
+          !preview.loading && <p className="empty-hint">{t('editor.promptEmpty')}</p>
         )}
       </Section>
     </div>
@@ -527,12 +526,13 @@ export function TemplateEditorPage({
 }
 
 function AddFieldRow({ onAdd }: { onAdd: (key: string) => void }) {
+  const { t } = useTranslation();
   const [key, setKey] = useState('');
   const valid = /^[a-z0-9_]+$/.test(key);
   return (
     <div className="add-field-row">
       <input
-        placeholder="new_field_key (snake_case)"
+        placeholder={t('editor.addFieldPlaceholder')}
         value={key}
         onChange={(event) => setKey(event.target.value)}
       />
@@ -543,11 +543,9 @@ function AddFieldRow({ onAdd }: { onAdd: (key: string) => void }) {
           setKey('');
         }}
       >
-        Add field
+        {t('editor.addField')}
       </button>
-      {!valid && key.length > 0 && (
-        <span className="muted">Use lowercase letters, digits, and _</span>
-      )}
+      {!valid && key.length > 0 && <span className="muted">{t('editor.fieldKeyHint')}</span>}
     </div>
   );
 }

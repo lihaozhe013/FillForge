@@ -1,6 +1,7 @@
 import { app } from 'electron';
-import { registerIpcHandlers } from './ipc/handlers';
 import { initLogger, logAppEvent } from './logger';
+import { registerIpcHandlers } from './ipc/handlers';
+import { applyLanguage } from './i18n';
 import { installApplicationMenu } from './menu';
 import { createAppServices } from './services';
 import { createMainWindow, quitWhenAllWindowsClosedOnNonMac } from './window';
@@ -23,6 +24,7 @@ app.whenReady().then(async () => {
     });
     logAppEvent('info', `Data directory: ${services.paths.dataDir}`);
     registerIpcHandlers(services);
+    applyLanguage(services.config.language);
     installApplicationMenu();
     createMainWindow();
   } catch (error) {

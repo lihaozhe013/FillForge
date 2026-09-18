@@ -33,6 +33,7 @@ describe('IPC request schemas', () => {
     expect(
       settingsSaveSchema.safeParse({
         theme: 'dark',
+        language: 'zh-CN',
         showAdvancedFields: true,
         promptVersion: 'fillforge-extraction-v1'
       }).success
@@ -40,6 +41,15 @@ describe('IPC request schemas', () => {
     expect(
       settingsSaveSchema.safeParse({
         theme: 'neon',
+        language: 'zh-CN',
+        showAdvancedFields: true,
+        promptVersion: 'fillforge-extraction-v1'
+      }).success
+    ).toBe(false);
+    expect(
+      settingsSaveSchema.safeParse({
+        theme: 'dark',
+        language: 'fr',
         showAdvancedFields: true,
         promptVersion: 'fillforge-extraction-v1'
       }).success

@@ -1,4 +1,9 @@
-import { runIdSchema, templateIdSchema, templateSchema } from '@fillforge/schema';
+import {
+  appLanguageSchema,
+  runIdSchema,
+  templateIdSchema,
+  templateSchema
+} from '@fillforge/schema';
 import { z } from 'zod';
 
 export const emptyPayloadSchema = z.void();
@@ -28,6 +33,7 @@ export const runsSaveReviewSchema = z.object({
 
 export const settingsSaveSchema = z.object({
   theme: z.enum(['system', 'light', 'dark']),
+  language: appLanguageSchema,
   showAdvancedFields: z.boolean(),
   promptVersion: z.string().trim().min(1).max(100)
 });
