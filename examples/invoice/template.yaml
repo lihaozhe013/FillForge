@@ -1,0 +1,93 @@
+schema_version: 1
+
+id: invoice
+name: Invoice
+description: Extract invoice values and render a completed invoice
+
+document:
+  file: template.docx
+
+fields:
+  invoice_number:
+    label: Invoice number
+    description: The number explicitly labelled as the invoice number
+    type: string
+    required: true
+    extraction:
+      instruction: Find the value labelled Invoice number. Do not confuse it with the invoice code.
+    normalization:
+      trim: true
+      remove_spaces: true
+    validation:
+      regex: '^[0-9A-Za-z-]+$'
+
+  invoice_date:
+    label: Invoice date
+    description: The date printed as the invoice date
+    type: date
+    required: true
+    extraction:
+      instruction: Extract the date labelled Invoice date.
+    output:
+      format: YYYY-MM-DD
+    validation:
+      date_format: YYYY-MM-DD
+
+  seller_name:
+    label: Seller name
+    description: The legal or display name of the seller
+    type: string
+    required: true
+    extraction:
+      instruction: Extract the seller name, not the buyer name.
+    normalization:
+      trim: true
+
+  buyer_name:
+    label: Buyer name
+    description: The legal or display name of the buyer
+    type: string
+    required: true
+    extraction:
+      instruction: Extract the buyer name, not the seller name.
+    normalization:
+      trim: true
+
+  total_amount:
+    label: Total amount
+    description: The final amount including tax
+    type: number
+    required: true
+    extraction:
+      instruction: Extract the final total amount, not the tax amount or pre-tax amount.
+    validation:
+      minimum: 0
+
+bindings:
+  invoice_number:
+    source: invoice_number
+
+  invoice_year:
+    source: invoice_date
+    transform: date_year
+
+  invoice_month:
+    source: invoice_date
+    transform: date_month
+
+  invoice_day:
+    source: invoice_date
+    transform: date_day
+
+  seller_name:
+    source: seller_name
+
+  buyer_name:
+    source: buyer_name
+
+  total_amount:
+    source: total_amount
+
+  total_amount_uppercase:
+    source: total_amount
+    transform: chinese_currency_uppercase

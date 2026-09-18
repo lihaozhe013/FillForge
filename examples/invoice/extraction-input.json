@@ -1,0 +1,27 @@
+{
+  "invoice_number": {
+    "value": "INV-2026-00418",
+    "status": "found",
+    "evidence": "Invoice number: INV-2026-00418"
+  },
+  "invoice_date": {
+    "value": "2026-03-17",
+    "status": "found",
+    "evidence": "Invoice date: 2026-03-17"
+  },
+  "seller_name": {
+    "value": "Northwind Trading Co., Ltd.",
+    "status": "found",
+    "evidence": "Seller: Northwind Trading Co., Ltd."
+  },
+  "buyer_name": {
+    "value": "Contoso Studio LLC",
+    "status": "found",
+    "evidence": "Buyer: Contoso Studio LLC"
+  },
+  "total_amount": {
+    "value": 18650.5,
+    "status": "found",
+    "evidence": "Total incl. tax: 18,650.50"
+  }
+}

@@ -94,6 +94,9 @@ Amount in words: {total_amount_uppercase}
 Save the document as a DOCX file, for example invoice-template.docx. FillForge copies this file when
 you import it, so you can move or delete the original after import.
 
+A ready-made copy of this example document, together with the configuration written in section 4.2,
+ships in the repository under [examples/invoice](../examples/README.md).
+
 ### 3.2 Placeholder rules
 
 Use plain Docxtemplater-compatible placeholders:
@@ -201,7 +204,9 @@ YAML is indentation-sensitive:
 
 ### 4.2 Complete invoice example
 
-The following configuration matches the Word example above:
+The following configuration matches the Word example above. The identical pair (this YAML plus a
+fillable DOCX) is checked in under [examples/invoice](../examples/README.md) and covered by the
+integration tests, so you can import it instead of typing it out:
 
 ```yaml
 schema_version: 1

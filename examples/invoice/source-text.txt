@@ -1,0 +1,25 @@
+Simulated OCR / plain-text output of a paper invoice.
+
+Paste this block into the chat together with the extraction prompt that
+FillForge generates for the "invoice" template (Templates -> invoice ->
+Prompt, or `pnpm tsx packages/tools/src/index.ts extract-fields invoice`).
+
+--- BEGIN DOCUMENT TEXT ---
+INVOICE
+
+Seller: Northwind Trading Co., Ltd.
+Buyer: Contoso Studio LLC
+
+Invoice number: INV-2026-00418
+Invoice date: 2026-03-17
+
+Line items
+  Widget design services                12,500.00
+  Prototype parts                       4,005.00
+
+Subtotal (excl. tax):                   16,505.00
+VAT 13%:                                 2,145.50
+Total incl. tax:                        18,650.50
+
+Payment due within 30 days.
+--- END DOCUMENT TEXT ---

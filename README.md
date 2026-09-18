@@ -28,6 +28,8 @@ The MVP vertical slice is implemented and tested:
 - CLI commands that reuse the desktop application services.
 - Settings for theme, advanced editor fields, and prompt version.
 - English user documentation available from the Help menu and GitHub.
+- A complete end-to-end example template (DOCX + YAML + sample extraction JSON) under
+  [examples/](examples/README.md), exercised by the integration tests.
 
 ## MVP workflow
 
@@ -86,6 +88,17 @@ pnpm typecheck
 pnpm lint
 pnpm format:check
 pnpm build
+```
+
+## Examples
+
+[examples/invoice/](examples/invoice/README.md) ships a ready-made Word template together with its
+`template.yaml`, a simulated source document, and a sample extraction JSON. It mirrors the User
+Guide walkthrough, is validated by `tests/integration/examples.test.ts` on every test run, and can
+be imported directly to try the full workflow:
+
+```bash
+pnpm fixtures  # regenerate the example DOCX (and test fixtures) after editing examples/make-example.ts
 ```
 
 ## CLI

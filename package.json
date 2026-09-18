@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "fixtures": "tsx tests/fixtures/make-fixtures.ts && tsx examples/make-example.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
