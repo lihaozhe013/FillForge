@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { fieldDefinitionSchema } from './field.ts';
+import { fieldDefinitionSchema, type FieldDefinitions } from './field.ts';
 
 export const templateIdSchema = z.string().regex(/^[a-z0-9][a-z0-9._-]*$/, {
   message: 'Template id must be a stable machine identifier (lowercase snake_case)'
@@ -52,10 +52,13 @@ export interface CreateTemplateInput {
   name: string;
   description?: string;
   documentPath: string;
+  fields?: FieldDefinitions;
+  bindings?: Record<string, TemplateBinding>;
 }
 
 export interface PlaceholderReport {
   placeholders: string[];
   unconfigured: string[];
   unreferenced: string[];
+  unsupportedTags?: string[];
 }

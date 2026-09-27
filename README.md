@@ -18,7 +18,8 @@ checkout to a working development environment.
 The MVP vertical slice is implemented and tested:
 
 - Electron 44 desktop app with React, Vite, TypeScript, sandboxed preload, and typed IPC.
-- DOCX import and placeholder inspection that handles Word XML run boundaries.
+- DOCX import that inspects simple placeholders across Word XML run boundaries and creates matching
+  fields and bindings automatically.
 - YAML-backed template definitions for fields, extraction instructions, validation, normalization,
   and bindings.
 - Deterministic extraction prompts and expected JSON previews.
@@ -36,7 +37,7 @@ The MVP vertical slice is implemented and tested:
 ```text
 DOCX template
     ↓
-Inspect placeholders and configure business fields
+Automatically create fields and bindings from placeholders
     ↓
 Generate prompt and expected JSON
     ↓

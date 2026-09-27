@@ -1,5 +1,6 @@
-import { readFileBinary } from '@fillforge/core';
+import { AppError, readFileBinary, ValidationError } from '@fillforge/core';
 import type { DocumentRenderer } from '@fillforge/docx';
+import { TEMPLATE_SCHEMA_VERSION } from '@fillforge/schema';
 import type {
   CreateTemplateInput,
   FieldDefinition,
@@ -9,7 +10,29 @@ import type {
   TemplateSummary
 } from '@fillforge/schema';
 import { computePlaceholderReport } from './inspect.ts';
+import { collectUnsupportedTags, mergePlaceholderDefaults } from './placeholders.ts';
 import { FileTemplateRepository, type TemplateRepository } from './repository.ts';
+
+function requireSupportedPlaceholders(
+  inspection: Awaited<ReturnType<DocumentRenderer['inspect']>>
+): string[] {
+  const unsupportedTags = collectUnsupportedTags(inspection);
+  if (unsupportedTags.length > 0) {
+    throw new AppError(
+      'template_placeholders_unsupported',
+      'Use simple lowercase English placeholders such as {invoice_number}.',
+      { details: unsupportedTags }
+    );
+  }
+  const placeholders = [...new Set(inspection.placeholders)].sort();
+  if (placeholders.length === 0) {
+    throw new AppError(
+      'template_placeholders_missing',
+      'Add at least one placeholder such as {invoice_number} to the DOCX, then import it again.'
+    );
+  }
+  return placeholders;
+}
 
 export class TemplateService {
   readonly repository: TemplateRepository;
@@ -33,8 +56,25 @@ export class TemplateService {
     return this.repository.load(id);
   }
 
-  importTemplate(input: CreateTemplateInput): Promise<TemplateSchema> {
-    return this.repository.create(input);
+  async importTemplate(input: CreateTemplateInput): Promise<TemplateSchema> {
+    const document = await readFileBinary(input.documentPath);
+    const inspection = await this.renderer.inspect(document);
+    const placeholders = requireSupportedPlaceholders(inspection);
+    const emptyTemplate: TemplateSchema = {
+      schema_version: TEMPLATE_SCHEMA_VERSION,
+      id: 'placeholder-template',
+      name: input.name,
+      ...(input.description === undefined ? {} : { description: input.description }),
+      document: { file: 'template.docx' },
+      fields: {},
+      bindings: {}
+    };
+    const generated = mergePlaceholderDefaults(emptyTemplate, placeholders).template;
+    return this.repository.create({
+      ...input,
+      fields: generated.fields,
+      bindings: generated.bindings
+    });
   }
 
   saveSchema(id: string, schema: TemplateSchema): Promise<void> {
@@ -62,6 +102,24 @@ export class TemplateService {
     };
     await this.repository.saveSchema(id, merged);
     return merged;
+  }
+
+  async syncPlaceholders(id: string, draft?: TemplateSchema): Promise<TemplateSchema> {
+    const current = draft ?? (await this.repository.load(id));
+    if (current.id !== id) {
+      throw new ValidationError('Template id does not match the requested template.', {
+        requestedId: id,
+        schemaId: current.id
+      });
+    }
+    const document = await readFileBinary(await this.repository.getDocumentPath(id));
+    const inspection = await this.renderer.inspect(document);
+    const placeholders = requireSupportedPlaceholders(inspection);
+    const merged = mergePlaceholderDefaults(current, placeholders);
+    if (merged.changed || draft !== undefined) {
+      await this.repository.saveSchema(id, merged.template);
+    }
+    return merged.template;
   }
 
   async inspectTemplate(id: string): Promise<PlaceholderReport> {

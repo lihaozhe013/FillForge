@@ -26,7 +26,8 @@ import {
   systemPathSchema,
   templatesLoadSchema,
   templatesPromptPreviewSchema,
-  templatesSaveSchemaSchema
+  templatesSaveSchemaSchema,
+  templatesSyncPlaceholdersSchema
 } from './schemas';
 
 function focusedWindow(): BrowserWindow | undefined {
@@ -128,6 +129,10 @@ export function registerIpcHandlers(services: AppServices): void {
 
   handle(IPC.templatesInspect, templatesLoadSchema, ({ id }) =>
     templateService.inspectTemplate(id)
+  );
+
+  handle(IPC.templatesSyncPlaceholders, templatesSyncPlaceholdersSchema, ({ id, schema }) =>
+    templateService.syncPlaceholders(id, schema)
   );
 
   handle(IPC.templatesDuplicate, templatesLoadSchema, async ({ id }) => {

@@ -24,6 +24,7 @@ export function computePlaceholderReport(
     unconfigured: inspection.placeholders.filter(
       (placeholder) => !Object.hasOwn(bindings, placeholder)
     ),
-    unreferenced: [...fieldKeys].filter((field) => !referencedSources.has(field)).sort()
+    unreferenced: [...fieldKeys].filter((field) => !referencedSources.has(field)).sort(),
+    ...(inspection.unsupportedTags?.length ? { unsupportedTags: inspection.unsupportedTags } : {})
   };
 }

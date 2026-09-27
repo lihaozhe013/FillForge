@@ -18,8 +18,12 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   async function importTemplate() {
     try {
       setActionError(null);
-      await window.fillforge.templates.import();
-      templates.reload();
+      const template = await window.fillforge.templates.import();
+      if (template) {
+        navigate({ page: 'templateEditor', templateId: template.id });
+      } else {
+        templates.reload();
+      }
     } catch (cause) {
       setActionError(extractError(cause));
     }

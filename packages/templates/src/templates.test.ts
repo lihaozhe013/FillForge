@@ -138,13 +138,30 @@ describe('FileTemplateRepository', () => {
 });
 
 describe('TemplateService', () => {
-  it('inspects placeholders and reports unconfigured ones', async () => {
+  it('creates same-name fields and bindings for imported placeholders', async () => {
     const templatesDir = await createTempTemplatesDir();
     const service = TemplateService.createDefault(templatesDir, createDocxtemplaterRenderer());
-    await service.importTemplate({
+    const template = await service.importTemplate({
       id: 'invoice-cn',
       name: '中国发票',
       documentPath: FIXTURE_TEMPLATE
+    });
+    expect(Object.keys(template.fields)).toEqual([
+      'invoice_date',
+      'invoice_number',
+      'seller_name',
+      'total_amount'
+    ]);
+    expect(template.fields.invoice_number).toEqual({
+      label: 'invoice_number',
+      type: 'string',
+      required: false
+    });
+    expect(template.bindings).toEqual({
+      invoice_date: { source: 'invoice_date' },
+      invoice_number: { source: 'invoice_number' },
+      seller_name: { source: 'seller_name' },
+      total_amount: { source: 'total_amount' }
     });
     const report = await service.inspectTemplate('invoice-cn');
     expect(report.placeholders).toEqual([
@@ -153,11 +170,11 @@ describe('TemplateService', () => {
       'seller_name',
       'total_amount'
     ]);
-    expect(report.unconfigured).toEqual(report.placeholders);
+    expect(report.unconfigured).toEqual([]);
     expect(report.unreferenced).toEqual([]);
   });
 
-  it('reports configured fields that are no longer referenced', async () => {
+  it('syncs missing placeholders without replacing existing field settings or bindings', async () => {
     const templatesDir = await createTempTemplatesDir();
     const service = TemplateService.createDefault(templatesDir, createDocxtemplaterRenderer());
     await service.importTemplate({
@@ -165,21 +182,43 @@ describe('TemplateService', () => {
       name: '中国发票',
       documentPath: FIXTURE_TEMPLATE
     });
-    await service.mergeFields('invoice-cn', {
-      invoice_number: {
-        label: '发票号码',
-        type: 'string',
-        required: true
+    const original = await service.loadTemplate('invoice-cn');
+    const customBinding = { source: 'custom_source', transform: 'uppercase' };
+    const legacy = {
+      ...original,
+      fields: {
+        invoice_date: {
+          label: 'Invoice date',
+          description: 'Keep this description.',
+          type: 'date' as const,
+          required: true
+        },
+        custom_source: { label: 'Custom source', type: 'string' as const, required: true },
+        legacy_unused: { label: 'Legacy field', type: 'string' as const, required: false }
       },
-      obsolete_field: { label: '废弃字段', type: 'string', required: false }
+      bindings: { invoice_number: customBinding }
+    };
+    await service.saveSchema('invoice-cn', legacy);
+    const synced = await service.syncPlaceholders('invoice-cn', legacy);
+    expect(synced.fields.invoice_date).toEqual(legacy.fields.invoice_date);
+    expect(synced.fields.invoice_number).toEqual({
+      label: 'invoice_number',
+      type: 'string',
+      required: false
     });
-    await service.mergeBindings('invoice-cn', {
-      invoice_number: { source: 'invoice_number' },
-      old_placeholder: { source: 'obsolete_field' }
+    expect(synced.fields.custom_source).toEqual(legacy.fields.custom_source);
+    expect(synced.fields.legacy_unused).toEqual(legacy.fields.legacy_unused);
+    expect(synced.fields.invoice_date).toEqual({
+      label: 'invoice_date',
+      type: 'string',
+      required: false
     });
+    expect(synced.bindings?.invoice_number).toEqual(customBinding);
+    expect(synced.bindings?.invoice_date).toEqual({ source: 'invoice_date' });
+    expect(await service.syncPlaceholders('invoice-cn')).toEqual(synced);
     const report = await service.inspectTemplate('invoice-cn');
-    expect(report.unconfigured).toEqual(['invoice_date', 'seller_name', 'total_amount']);
-    expect(report.unreferenced).toEqual(['obsolete_field']);
+    expect(report.unconfigured).toEqual([]);
+    expect(report.unreferenced).toEqual(['invoice_number', 'legacy_unused']);
   });
 
   it('rejects template document paths outside the template directory', async () => {

@@ -23,6 +23,7 @@ export const IPC = {
   templatesLoad: 'templates:load',
   templatesSaveSchema: 'templates:update-schema',
   templatesInspect: 'templates:inspect',
+  templatesSyncPlaceholders: 'templates:sync-placeholders',
   templatesDuplicate: 'templates:duplicate',
   templatesDelete: 'templates:delete',
   templatesPromptPreview: 'templates:prompt-preview',
@@ -88,6 +89,7 @@ export interface FillForgeApi {
     load(id: string): Promise<TemplateSchema>;
     saveSchema(id: string, schema: TemplateSchema): Promise<void>;
     inspect(id: string): Promise<PlaceholderReport>;
+    syncPlaceholders(id: string, schema?: TemplateSchema): Promise<TemplateSchema>;
     duplicate(id: string): Promise<TemplateSummary>;
     delete(id: string): Promise<void>;
     promptPreview(id: string): Promise<PromptPreview | null>;

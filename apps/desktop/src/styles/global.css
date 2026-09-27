@@ -430,6 +430,27 @@ input:disabled {
   margin-bottom: 10px;
 }
 
+.connection-state {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.connection-state.connected {
+  color: var(--ok);
+}
+
+.field-basic-settings {
+  display: grid;
+  grid-template-columns: minmax(160px, 260px) auto;
+  gap: 12px 20px;
+  align-items: end;
+}
+
+.field-basic-settings .checkbox {
+  align-self: center;
+  margin-bottom: 10px;
+}
+
 .add-field-row {
   display: flex;
   gap: 8px;
@@ -445,6 +466,29 @@ input:disabled {
   flex-direction: column;
   gap: 6px;
   line-height: 1.55;
+}
+
+.placeholder-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.placeholder-list code {
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-subtle);
+}
+
+.advanced-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.advanced-template-details {
+  padding: 0 12px;
 }
 
 .warn-text {

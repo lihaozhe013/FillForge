@@ -18,7 +18,7 @@ const TRANSFORMS = [
   'chinese_currency_uppercase'
 ] as const;
 
-type FieldValidation = NonNullable<FieldDefinition['validation']>;
+type FieldValidationValues = NonNullable<FieldDefinition['validation']>;
 
 export function TemplateEditorPage({
   templateId,
@@ -40,23 +40,34 @@ export function TemplateEditorPage({
 
   const [draft, setDraft] = useState<TemplateSchema | null>(null);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [draftDirty, setDraftDirty] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (loaded.data) {
       setDraft(structuredClone(loaded.data));
+      setDraftDirty(false);
     }
   }, [loaded.data]);
 
   const report: PlaceholderReport | null = inspection.data ?? null;
-
   const allPlaceholderKeys = useMemo(() => {
     const keys = new Set<string>(report?.placeholders ?? []);
     for (const key of Object.keys(draft?.bindings ?? {})) {
       keys.add(key);
     }
     return [...keys].sort();
+  }, [report, draft]);
+  const connectedFields = useMemo(() => {
+    const currentPlaceholders = new Set(report?.placeholders ?? []);
+    return new Set(
+      Object.entries(draft?.bindings ?? {})
+        .filter(([placeholder]) => currentPlaceholders.has(placeholder))
+        .map(([, binding]) => binding.source)
+    );
   }, [report, draft]);
 
   if (loaded.error) {
@@ -78,7 +89,7 @@ export function TemplateEditorPage({
     if (!draft) return;
     const current = draft.fields[key];
     if (!current) return;
-    setSaved(false);
+    markDirty();
     setDraft({
       ...draft,
       fields: {
@@ -88,14 +99,19 @@ export function TemplateEditorPage({
     });
   }
 
-  function updateValidation<K extends keyof FieldValidation>(
+  function markDirty() {
+    setSaved(false);
+    setDraftDirty(true);
+  }
+
+  function updateValidation<K extends keyof FieldValidationValues>(
     key: string,
     property: K,
-    value: FieldValidation[K] | undefined
+    value: FieldValidationValues[K] | undefined
   ) {
     if (!draft) return;
     const current = draft.fields[key]?.validation ?? {};
-    const validation = { ...current } as FieldValidation;
+    const validation = { ...current } as FieldValidationValues;
     const empty =
       value === undefined ||
       (typeof value === 'string' && value === '') ||
@@ -103,7 +119,7 @@ export function TemplateEditorPage({
     if (empty) {
       delete validation[property];
     } else {
-      validation[property] = value as FieldValidation[K];
+      validation[property] = value as FieldValidationValues[K];
     }
     updateField(key, {
       validation: Object.keys(validation).length === 0 ? undefined : validation
@@ -114,9 +130,34 @@ export function TemplateEditorPage({
     if (!draft) return;
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       await window.fillforge.templates.saveSchema(draft.id, draft);
       setSaved(true);
+      setDraftDirty(false);
+      inspection.reload();
+      preview.reload();
+    } catch (cause) {
+      setError(extractError(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function syncPlaceholders() {
+    if (!draft) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const updated = await window.fillforge.templates.syncPlaceholders(
+        draft.id,
+        draftDirty ? draft : undefined
+      );
+      setDraft(updated);
+      setSaved(true);
+      setDraftDirty(false);
+      setNotice(t('editor.placeholdersSynced'));
       inspection.reload();
       preview.reload();
     } catch (cause) {
@@ -141,19 +182,16 @@ export function TemplateEditorPage({
       </header>
 
       <ErrorBanner error={error ?? inspection.error} />
+      {notice && <div className="notice-banner">{notice}</div>}
 
       <Section title={t('editor.general')}>
         <div className="form-grid">
-          <label>
-            {t('editor.id')}
-            <input value={draft.id} disabled />
-          </label>
           <label>
             {t('editor.name')}
             <input
               value={draft.name}
               onChange={(event) => {
-                setSaved(false);
+                markDirty();
                 setDraft({ ...draft, name: event.target.value });
               }}
             />
@@ -163,7 +201,7 @@ export function TemplateEditorPage({
             <input
               value={draft.description ?? ''}
               onChange={(event) => {
-                setSaved(false);
+                markDirty();
                 setDraft({
                   ...draft,
                   ...(event.target.value === ''
@@ -173,32 +211,37 @@ export function TemplateEditorPage({
               }}
             />
           </label>
-          <label>
-            {t('editor.document')}
-            <input value={draft.document.file} disabled />
-          </label>
         </div>
       </Section>
 
       <Section
         title={t('editor.placeholders')}
         actions={
-          <button
-            className="link"
-            onClick={() => {
-              inspection.reload();
-            }}
-          >
-            {t('editor.reInspect')}
-          </button>
+          <>
+            <button className="link" disabled={busy} onClick={() => void syncPlaceholders()}>
+              {t('editor.syncPlaceholders')}
+            </button>
+            <button className="link" disabled={busy} onClick={() => inspection.reload()}>
+              {t('editor.reInspect')}
+            </button>
+          </>
         }
       >
         {report && (
           <div className="report">
-            <div>
-              {t('editor.detected')}{' '}
-              <code>{report.placeholders.join(', ') || t('editor.noneValue')}</code>
-            </div>
+            <div>{t('editor.detectedCount', { total: report.placeholders.length })}</div>
+            {report.placeholders.length > 0 && (
+              <div className="placeholder-list">
+                {report.placeholders.map((placeholder) => (
+                  <code key={placeholder}>{placeholder}</code>
+                ))}
+              </div>
+            )}
+            {report.unsupportedTags && report.unsupportedTags.length > 0 && (
+              <div className="warn-text">
+                {t('editor.unsupportedTags')} <code>{report.unsupportedTags.join(', ')}</code>
+              </div>
+            )}
             {report.unconfigured.length > 0 && (
               <div className="warn-text">
                 {t('editor.notBoundYet')} <code>{report.unconfigured.join(', ')}</code>
@@ -219,37 +262,15 @@ export function TemplateEditorPage({
             <div className="field-card" key={key}>
               <div className="field-card-header">
                 <code>{key}</code>
-                <button
-                  className="link danger"
-                  onClick={() => {
-                    setSaved(false);
-                    const fields = { ...draft.fields };
-                    delete fields[key];
-                    setDraft({ ...draft, fields });
-                  }}
+                <span
+                  className={
+                    connectedFields.has(key) ? 'connection-state connected' : 'connection-state'
+                  }
                 >
-                  {t('editor.removeField')}
-                </button>
+                  {connectedFields.has(key) ? t('editor.connected') : t('editor.notConnected')}
+                </span>
               </div>
-              <div className="form-grid">
-                <label>
-                  {t('editor.displayName')}
-                  <input
-                    value={field.label}
-                    onChange={(event) => updateField(key, { label: event.target.value })}
-                  />
-                </label>
-                <label>
-                  {t('editor.meaning')}
-                  <input
-                    value={field.description ?? ''}
-                    onChange={(event) =>
-                      updateField(key, {
-                        description: event.target.value || undefined
-                      })
-                    }
-                  />
-                </label>
+              <div className="field-basic-settings">
                 <label>
                   {t('editor.type')}
                   <select
@@ -260,7 +281,7 @@ export function TemplateEditorPage({
                   >
                     {FIELD_TYPES.map((type) => (
                       <option key={type} value={type}>
-                        {type}
+                        {t(`editor.typeNames.${type}`)}
                       </option>
                     ))}
                   </select>
@@ -273,252 +294,329 @@ export function TemplateEditorPage({
                   />
                   {t('editor.required')}
                 </label>
-                <label className="span-2">
-                  {t('editor.extractionInstruction')}
-                  <textarea
-                    rows={2}
-                    value={field.extraction?.instruction ?? ''}
-                    onChange={(event) =>
-                      updateField(key, {
-                        extraction:
-                          event.target.value === ''
-                            ? undefined
-                            : { instruction: event.target.value }
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  {t('editor.validationRegex')}
-                  <input
-                    value={field.validation?.regex ?? ''}
-                    placeholder="^[0-9A-Za-z-]+$"
-                    onChange={(event) => updateValidation(key, 'regex', event.target.value)}
-                  />
-                </label>
-                <label>
-                  {t('editor.minimum')}
-                  <input
-                    type="number"
-                    value={field.validation?.minimum ?? ''}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      updateValidation(
-                        key,
-                        'minimum',
-                        value === ''
-                          ? undefined
-                          : Number.isFinite(Number(value))
-                            ? Number(value)
-                            : undefined
-                      );
-                    }}
-                  />
-                </label>
-                <label>
-                  {t('editor.maximum')}
-                  <input
-                    type="number"
-                    value={field.validation?.maximum ?? ''}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      updateValidation(
-                        key,
-                        'maximum',
-                        value === ''
-                          ? undefined
-                          : Number.isFinite(Number(value))
-                            ? Number(value)
-                            : undefined
-                      );
-                    }}
-                  />
-                </label>
-                <label>
-                  {t('editor.enumValues')}
-                  <input
-                    value={field.validation?.enum?.join(', ') ?? ''}
-                    onChange={(event) =>
-                      updateValidation(
-                        key,
-                        'enum',
-                        event.target.value
-                          .split(',')
-                          .map((value) => value.trim())
-                          .filter(Boolean)
-                      )
-                    }
-                  />
-                </label>
-                <label>
-                  {t('editor.validationDateFormat')}
-                  <input
-                    value={field.validation?.date_format ?? ''}
-                    placeholder="YYYY-MM-DD"
-                    disabled={field.type !== 'date'}
-                    onChange={(event) => updateValidation(key, 'date_format', event.target.value)}
-                  />
-                </label>
-                <label>
-                  {t('editor.outputDateFormat')}
-                  <input
-                    value={field.output?.format ?? ''}
-                    placeholder="YYYY-MM-DD"
-                    disabled={field.type !== 'date'}
-                    onChange={(event) =>
-                      updateField(key, {
-                        output:
-                          event.target.value === '' ? undefined : { format: event.target.value }
-                      })
-                    }
-                  />
-                </label>
-                <label className="checkbox">
-                  <input
-                    type="checkbox"
-                    checked={field.normalization?.trim ?? false}
-                    onChange={(event) =>
-                      updateField(key, {
-                        normalization: { ...field.normalization, trim: event.target.checked }
-                      })
-                    }
-                  />
-                  {t('editor.normalizeTrim')}
-                </label>
-                <label className="checkbox">
-                  <input
-                    type="checkbox"
-                    checked={field.normalization?.remove_spaces ?? false}
-                    onChange={(event) =>
-                      updateField(key, {
-                        normalization: {
-                          ...field.normalization,
-                          remove_spaces: event.target.checked
-                        }
-                      })
-                    }
-                  />
-                  {t('editor.normalizeRemoveSpaces')}
-                </label>
               </div>
             </div>
           ))}
         </div>
-        <AddFieldRow
-          onAdd={(key) => {
-            setSaved(false);
-            setDraft({
-              ...draft,
-              fields: {
-                ...draft.fields,
-                [key]: { label: key, type: 'string', required: true }
-              }
-            });
-          }}
-        />
-      </Section>
-
-      <Section title={t('editor.bindings')}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('editor.colPlaceholder')}</th>
-              <th>{t('editor.colSourceField')}</th>
-              <th>{t('editor.colTransform')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allPlaceholderKeys.map((placeholder) => {
-              const binding = draft.bindings?.[placeholder];
-              return (
-                <tr key={placeholder}>
-                  <td>
-                    <code>{placeholder}</code>
-                  </td>
-                  <td>
-                    <select
-                      value={binding?.source ?? ''}
-                      onChange={(event) => {
-                        setSaved(false);
-                        const source = event.target.value;
-                        const bindings = { ...(draft.bindings ?? {}) };
-                        if (source === '') {
-                          delete bindings[placeholder];
-                        } else {
-                          bindings[placeholder] = {
-                            source,
-                            ...(binding?.transform ? { transform: binding.transform } : {})
-                          };
-                        }
-                        setDraft({ ...draft, bindings });
-                      }}
-                    >
-                      <option value="">{t('editor.notBound')}</option>
-                      {Object.keys(draft.fields).map((fieldKey) => (
-                        <option key={fieldKey} value={fieldKey}>
-                          {fieldKey}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <select
-                      value={binding?.transform ?? ''}
-                      disabled={!binding}
-                      onChange={(event) => {
-                        if (!draft || !binding) return;
-                        setSaved(false);
-                        const transform = event.target.value;
-                        const bindings = { ...(draft.bindings ?? {}) };
-                        bindings[placeholder] =
-                          transform === ''
-                            ? { source: binding.source }
-                            : { source: binding.source, transform };
-                        setDraft({ ...draft, bindings });
-                      }}
-                    >
-                      {TRANSFORMS.map((transform) => (
-                        <option key={transform} value={transform}>
-                          {transform === '' ? t('editor.transformNone') : transform}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {Object.keys(draft.fields).length === 0 && (
+          <p className="empty-hint">{t('editor.noFields')}</p>
+        )}
       </Section>
 
       <Section
-        title={t('editor.promptPreview')}
+        title={t('editor.advancedSettings')}
         actions={
-          preview.data && (
-            <button
-              className="link"
-              onClick={() => void copyToClipboard(preview.data?.prompt ?? '')}
-            >
-              {t('common.copyPrompt')}
-            </button>
-          )
+          <button className="link" onClick={() => setAdvancedOpen((open) => !open)}>
+            {advancedOpen ? t('editor.hideAdvanced') : t('editor.showAdvanced')}
+          </button>
         }
       >
-        {preview.loading && <p className="empty-hint">{t('common.loading')}</p>}
-        {preview.data ? (
-          <>
-            <pre className="prompt-preview">{preview.data.prompt}</pre>
-            <h3>{t('common.expectedJsonTitle')}</h3>
-            <pre className="prompt-preview">{preview.data.expectedJson}</pre>
-            <button
-              className="link"
-              onClick={() => void copyToClipboard(preview.data?.expectedJson ?? '')}
+        {advancedOpen && (
+          <div className="advanced-settings-content">
+            <div className="form-grid advanced-template-details">
+              <label>
+                {t('editor.id')}
+                <input value={draft.id} disabled />
+              </label>
+              <label>
+                {t('editor.document')}
+                <input value={draft.document.file} disabled />
+              </label>
+            </div>
+
+            <Section title={t('editor.fieldDetails')}>
+              <div className="field-list">
+                {Object.entries(draft.fields).map(([key, field]) => (
+                  <div className="field-card" key={key}>
+                    <div className="field-card-header">
+                      <code>{key}</code>
+                      <button
+                        className="link danger"
+                        onClick={() => {
+                          markDirty();
+                          const fields = { ...draft.fields };
+                          delete fields[key];
+                          const bindings = Object.fromEntries(
+                            Object.entries(draft.bindings ?? {}).filter(
+                              ([, binding]) => binding.source !== key
+                            )
+                          );
+                          setDraft({ ...draft, fields, bindings });
+                        }}
+                      >
+                        {t('editor.removeField')}
+                      </button>
+                    </div>
+                    <div className="form-grid">
+                      <label>
+                        {t('editor.displayName')}
+                        <input
+                          value={field.label}
+                          onChange={(event) => updateField(key, { label: event.target.value })}
+                        />
+                      </label>
+                      <label>
+                        {t('editor.meaning')}
+                        <input
+                          value={field.description ?? ''}
+                          onChange={(event) =>
+                            updateField(key, { description: event.target.value || undefined })
+                          }
+                        />
+                      </label>
+                      <label className="span-2">
+                        {t('editor.extractionInstruction')}
+                        <textarea
+                          rows={2}
+                          value={field.extraction?.instruction ?? ''}
+                          onChange={(event) =>
+                            updateField(key, {
+                              extraction:
+                                event.target.value === ''
+                                  ? undefined
+                                  : { instruction: event.target.value }
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        {t('editor.validationRegex')}
+                        <input
+                          value={field.validation?.regex ?? ''}
+                          placeholder="^[0-9A-Za-z-]+$"
+                          onChange={(event) => updateValidation(key, 'regex', event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t('editor.minimum')}
+                        <input
+                          type="number"
+                          value={field.validation?.minimum ?? ''}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            updateValidation(
+                              key,
+                              'minimum',
+                              value === ''
+                                ? undefined
+                                : Number.isFinite(Number(value))
+                                  ? Number(value)
+                                  : undefined
+                            );
+                          }}
+                        />
+                      </label>
+                      <label>
+                        {t('editor.maximum')}
+                        <input
+                          type="number"
+                          value={field.validation?.maximum ?? ''}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            updateValidation(
+                              key,
+                              'maximum',
+                              value === ''
+                                ? undefined
+                                : Number.isFinite(Number(value))
+                                  ? Number(value)
+                                  : undefined
+                            );
+                          }}
+                        />
+                      </label>
+                      <label>
+                        {t('editor.enumValues')}
+                        <input
+                          value={field.validation?.enum?.join(', ') ?? ''}
+                          onChange={(event) =>
+                            updateValidation(
+                              key,
+                              'enum',
+                              event.target.value
+                                .split(',')
+                                .map((value) => value.trim())
+                                .filter(Boolean)
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        {t('editor.validationDateFormat')}
+                        <input
+                          value={field.validation?.date_format ?? ''}
+                          placeholder="YYYY-MM-DD"
+                          disabled={field.type !== 'date'}
+                          onChange={(event) =>
+                            updateValidation(key, 'date_format', event.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        {t('editor.outputDateFormat')}
+                        <input
+                          value={field.output?.format ?? ''}
+                          placeholder="YYYY-MM-DD"
+                          disabled={field.type !== 'date'}
+                          onChange={(event) =>
+                            updateField(key, {
+                              output:
+                                event.target.value === ''
+                                  ? undefined
+                                  : { format: event.target.value }
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={field.normalization?.trim ?? false}
+                          onChange={(event) =>
+                            updateField(key, {
+                              normalization: { ...field.normalization, trim: event.target.checked }
+                            })
+                          }
+                        />
+                        {t('editor.normalizeTrim')}
+                      </label>
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={field.normalization?.remove_spaces ?? false}
+                          onChange={(event) =>
+                            updateField(key, {
+                              normalization: {
+                                ...field.normalization,
+                                remove_spaces: event.target.checked
+                              }
+                            })
+                          }
+                        />
+                        {t('editor.normalizeRemoveSpaces')}
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <AddFieldRow
+                onAdd={(key) => {
+                  markDirty();
+                  setDraft({
+                    ...draft,
+                    fields: {
+                      ...draft.fields,
+                      [key]: { label: key, type: 'string', required: true }
+                    }
+                  });
+                }}
+              />
+            </Section>
+
+            <Section title={t('editor.bindings')}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('editor.colPlaceholder')}</th>
+                    <th>{t('editor.colSourceField')}</th>
+                    <th>{t('editor.colTransform')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allPlaceholderKeys.map((placeholder) => {
+                    const binding = draft.bindings?.[placeholder];
+                    return (
+                      <tr key={placeholder}>
+                        <td>
+                          <code>{placeholder}</code>
+                        </td>
+                        <td>
+                          <select
+                            value={binding?.source ?? ''}
+                            onChange={(event) => {
+                              markDirty();
+                              const source = event.target.value;
+                              const bindings = { ...(draft.bindings ?? {}) };
+                              if (source === '') {
+                                delete bindings[placeholder];
+                              } else {
+                                bindings[placeholder] = {
+                                  source,
+                                  ...(binding?.transform ? { transform: binding.transform } : {})
+                                };
+                              }
+                              setDraft({ ...draft, bindings });
+                            }}
+                          >
+                            <option value="">{t('editor.notBound')}</option>
+                            {Object.keys(draft.fields).map((fieldKey) => (
+                              <option key={fieldKey} value={fieldKey}>
+                                {fieldKey}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            value={binding?.transform ?? ''}
+                            disabled={!binding}
+                            onChange={(event) => {
+                              if (!draft || !binding) return;
+                              markDirty();
+                              const transform = event.target.value;
+                              const bindings = { ...(draft.bindings ?? {}) };
+                              bindings[placeholder] =
+                                transform === ''
+                                  ? { source: binding.source }
+                                  : { source: binding.source, transform };
+                              setDraft({ ...draft, bindings });
+                            }}
+                          >
+                            {TRANSFORMS.map((transform) => (
+                              <option key={transform} value={transform}>
+                                {transform === '' ? t('editor.transformNone') : transform}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Section>
+
+            <Section
+              title={t('editor.promptPreview')}
+              actions={
+                preview.data && (
+                  <button
+                    className="link"
+                    onClick={() => void copyToClipboard(preview.data?.prompt ?? '')}
+                  >
+                    {t('common.copyPrompt')}
+                  </button>
+                )
+              }
             >
-              {t('common.copyExpectedJson')}
-            </button>
-          </>
-        ) : (
-          !preview.loading && <p className="empty-hint">{t('editor.promptEmpty')}</p>
+              {preview.loading && <p className="empty-hint">{t('common.loading')}</p>}
+              {preview.data ? (
+                <>
+                  <pre className="prompt-preview">{preview.data.prompt}</pre>
+                  <h3>{t('common.expectedJsonTitle')}</h3>
+                  <pre className="prompt-preview">{preview.data.expectedJson}</pre>
+                  <button
+                    className="link"
+                    onClick={() => void copyToClipboard(preview.data?.expectedJson ?? '')}
+                  >
+                    {t('common.copyExpectedJson')}
+                  </button>
+                </>
+              ) : (
+                !preview.loading && <p className="empty-hint">{t('editor.promptEmpty')}</p>
+              )}
+            </Section>
+          </div>
         )}
       </Section>
     </div>

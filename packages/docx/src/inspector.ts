@@ -75,8 +75,19 @@ export function inspectDocxPlaceholders(document: Uint8Array): TemplateInspectio
     });
   }
 
-  const placeholders = [...rawTags]
-    .map((tag) => normalizeTag(tag))
-    .filter((tag): tag is string => tag !== null);
-  return { placeholders: [...new Set(placeholders)].sort() };
+  const placeholders = new Set<string>();
+  const unsupportedTags = new Set<string>();
+  for (const rawTag of rawTags) {
+    if (/^[a-z][a-z0-9_]*$/.test(rawTag)) {
+      placeholders.add(rawTag);
+    } else {
+      unsupportedTags.add(rawTag.trim() || '(empty tag)');
+    }
+  }
+
+  const sortedUnsupportedTags = [...unsupportedTags].sort();
+  return {
+    placeholders: [...placeholders].sort(),
+    ...(sortedUnsupportedTags.length > 0 ? { unsupportedTags: sortedUnsupportedTags } : {})
+  };
 }

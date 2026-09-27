@@ -29,6 +29,8 @@ const api: FillForgeApi = {
     load: (id) => invoke(IPC.templatesLoad, { id }),
     saveSchema: (id, schema) => invoke(IPC.templatesSaveSchema, { id, schema }),
     inspect: (id) => invoke(IPC.templatesInspect, { id }),
+    syncPlaceholders: (id, schema) =>
+      invoke(IPC.templatesSyncPlaceholders, schema === undefined ? { id } : { id, schema }),
     duplicate: (id) => invoke(IPC.templatesDuplicate, { id }),
     delete: (id) => invoke(IPC.templatesDelete, { id }),
     promptPreview: (id) => invoke(IPC.templatesPromptPreview, { id })

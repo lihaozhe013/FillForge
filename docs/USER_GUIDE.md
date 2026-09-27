@@ -164,10 +164,10 @@ In the desktop application:
 1. Open Templates.
 2. Choose Import DOCX.
 3. Select invoice-template.docx.
-4. Open the imported template.
-5. Review the detected placeholder report.
-6. Resolve every unconfigured placeholder by adding a binding.
-7. Resolve every unreferenced field that should appear in the document.
+4. FillForge checks the document and creates a same-named field and binding for each supported
+   placeholder.
+5. The imported template opens automatically. Review the fields and set any values that should be
+   numeric, dates, or required.
 
 The imported copy is stored at:
 
@@ -485,22 +485,20 @@ Do not encode custom JavaScript in YAML.
 
 ### Step 1: Import
 
-Import the DOCX from Templates. FillForge creates a stable template ID and an initial YAML file with
-empty fields and bindings.
+Import the DOCX from Templates. FillForge inspects it before saving and creates a field and same-name
+binding for every unique placeholder such as `{invoice_number}`. The imported template opens
+automatically. Templates without a supported placeholder, damaged DOCX files, and unsupported
+expressions are rejected before a template is created.
 
 ### Step 2: Configure fields
 
-For each business value:
+Imported fields start as optional text fields, with the placeholder key as their label. For each
+field that needs different settings:
 
-1. Add or open a field.
-2. Choose a stable key such as invoice_number.
-3. Enter a human-facing label.
-4. Explain what the value means.
-5. Choose the type.
-6. Mark it required or optional.
-7. Add an extraction instruction when similar values may be confused.
-8. Add normalization and validation rules when needed.
-9. Save the template.
+1. Select its type and required status in the main field list.
+2. Open Advanced settings to add a human-facing label, meaning, extraction instruction, validation,
+   and normalization rules.
+3. Save the template.
 
 The extraction instruction should identify the correct source, not ask the model to format a DOCX.
 For example:
@@ -509,17 +507,14 @@ For example:
 Find the value explicitly labelled Invoice number. Do not use the invoice code.
 ```
 
-### Step 3: Configure bindings
+### Step 3: Sync or customize bindings
 
-For every placeholder in Word:
+Simple placeholders already have same-name bindings. If the DOCX has changed since import, choose
+Sync placeholders. This adds missing same-name fields and bindings while preserving existing field
+settings, custom sources, and transforms. Repeating the sync is safe.
 
-1. Use the placeholder name as the binding key.
-2. Select the business field as source.
-3. Add a transform only when deterministic formatting is required.
-4. Save the template.
-5. Inspect again and confirm there are no unexpected unconfigured placeholders.
-
-Example:
+Advanced settings expose the binding table for specialized mappings. For example, a date can feed a
+year-only placeholder with a deterministic transform:
 
 ```yaml
 bindings:
@@ -527,6 +522,8 @@ bindings:
     source: invoice_date
     transform: date_year
 ```
+
+Add a transform only when deterministic formatting is required, then save the template.
 
 ### Step 4: Preview the prompt
 

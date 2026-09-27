@@ -15,6 +15,11 @@ export const templatesSaveSchemaSchema = z.object({
   schema: templateSchema
 });
 
+export const templatesSyncPlaceholdersSchema = z.object({
+  id: templateIdSchema,
+  schema: templateSchema.optional()
+});
+
 export const templatesPromptPreviewSchema = z.object({ id: templateIdSchema });
 
 export const runsCreateSchema = z.object({ templateId: templateIdSchema }).strict();

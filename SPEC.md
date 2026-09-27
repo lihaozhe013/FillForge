@@ -93,7 +93,7 @@ rendering.
 
 | Stage             | Input                                | Output                              | Persistence                            |
 | ----------------- | ------------------------------------ | ----------------------------------- | -------------------------------------- |
-| Template import   | User-selected DOCX                   | Template directory and initial YAML | template.docx, template.yaml           |
+| Template import   | User-selected DOCX                   | Template with fields and bindings from placeholders | template.docx, template.yaml |
 | Inspection        | Template DOCX and YAML               | Placeholder report                  | No new canonical artifact              |
 | Run creation      | Template ID and optional evidence    | Run metadata and copied evidence    | metadata.json, input/                  |
 | Prompt generation | Template schema and prompt version   | Prompt plus expected JSON shape     | prompt.md                              |
@@ -403,6 +403,10 @@ DOCX placeholders MUST use Docxtemplater-compatible names such as:
 {total_amount}
 ```
 
+Automatic import and sync MUST accept simple lowercase English keys matching
+`^[a-z][a-z0-9_]*$`. Tags with filters, loops, conditions, spaces, or other expressions MUST be
+reported as unsupported and MUST prevent import or sync from writing a template.
+
 The inspection implementation MUST be DOCX-aware and MUST detect a visible placeholder split across
 Word XML runs. A naive regular expression over a single raw XML string is not sufficient.
 
@@ -611,14 +615,20 @@ placeholder unresolved for validation to report before rendering.
 
 ### 8.1 Template lifecycle
 
-1. Import MUST copy the selected DOCX to templates/<id>/template.docx.
-2. The application MUST continue to work if the original source file is later moved or deleted.
-3. Template import MUST initialize an empty fields and bindings mapping.
-4. Save MUST validate the complete template schema and ensure the configured document path stays
+1. Import MUST inspect the selected DOCX before creating a template and copy it to
+   templates/<id>/template.docx only when inspection succeeds.
+2. Import MUST require at least one supported placeholder and MUST reject unsupported tags before
+   creating a template.
+3. For every unique supported placeholder, import MUST create a field with the same key and label,
+   type `string`, and `required: false`, plus a binding whose source is that same key.
+4. The application MUST continue to work if the original source file is later moved or deleted.
+5. Syncing placeholders MUST add only missing same-key fields and bindings while preserving existing
+   field definitions, non-identity bindings, and transforms.
+6. Save MUST validate the complete template schema and ensure the configured document path stays
    inside the template directory.
-5. Duplicate MUST copy the directory, assign a valid new ID, and update the schema ID.
-6. Delete MUST remove only the selected template directory.
-7. Listing SHOULD continue when an individual template is unreadable; the unreadable entry MAY be
+7. Duplicate MUST copy the directory, assign a valid new ID, and update the schema ID.
+8. Delete MUST remove only the selected template directory.
+9. Listing SHOULD continue when an individual template is unreadable; the unreadable entry MAY be
    surfaced with a safe diagnostic instead of hiding healthy templates.
 
 ### 8.2 Prompt generation
@@ -731,6 +741,7 @@ templates:import
 templates:load
 templates:update-schema
 templates:inspect
+templates:sync-placeholders
 templates:duplicate
 templates:delete
 templates:prompt-preview
@@ -850,6 +861,7 @@ Tests MUST use temporary or environment-overridden roots and MUST cover:
 - unsupported schema versions;
 - invalid and traversal-prone identifiers and document paths;
 - placeholder inspection across Word XML run boundaries;
+- automatic placeholder field and binding creation plus sync preservation;
 - deterministic prompt output and expected JSON output;
 - plain JSON, fenced JSON, malformed JSON, missing fields, wrong types, not_found, and ambiguous
   extraction cases;

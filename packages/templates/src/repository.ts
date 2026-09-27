@@ -157,19 +157,37 @@ export class FileTemplateRepository implements TemplateRepository {
     if (await pathExists(dir)) {
       throw new AppError('template_already_exists', `Template "${id}" already exists.`);
     }
-    await fs.mkdir(dir, { recursive: true });
-    await copyFileWithCollisionAvoidance(input.documentPath, dir, TEMPLATE_DOCUMENT_FILE);
+    await fs.mkdir(this.templatesDir, { recursive: true });
+    const stagingDir = path.join(this.templatesDir, `.import-${id}-${randomSuffix()}`);
     const schema: TemplateSchema = {
       schema_version: TEMPLATE_SCHEMA_VERSION,
       id,
       name: input.name,
       ...(input.description === undefined ? {} : { description: input.description }),
       document: { file: TEMPLATE_DOCUMENT_FILE },
-      fields: {},
-      bindings: {}
+      fields: input.fields ?? {},
+      bindings: input.bindings ?? {}
     };
-    await this.saveSchema(id, schema);
-    return schema;
+    let committed = false;
+    try {
+      await fs.mkdir(stagingDir);
+      await copyFileWithCollisionAvoidance(input.documentPath, stagingDir, TEMPLATE_DOCUMENT_FILE);
+      const parsed = templateSchema.safeParse(schema);
+      if (!parsed.success) {
+        throw new InvalidTemplateSchemaError(id, parsed.error.issues);
+      }
+      await writeYamlFileAtomic(path.join(stagingDir, TEMPLATE_CONFIG_FILE), parsed.data);
+      if (await pathExists(dir)) {
+        throw new AppError('template_already_exists', `Template "${id}" already exists.`);
+      }
+      await fs.rename(stagingDir, dir);
+      committed = true;
+      return parsed.data;
+    } finally {
+      if (!committed) {
+        await removePath(stagingDir);
+      }
+    }
   }
 
   async saveSchema(id: string, schema: TemplateSchema): Promise<void> {

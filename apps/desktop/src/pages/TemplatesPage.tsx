@@ -24,16 +24,28 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
     }
   }
 
+  async function importTemplate() {
+    setBusy(true);
+    setError(null);
+    try {
+      const template = await window.fillforge.templates.import();
+      templates.reload();
+      if (template) {
+        navigate({ page: 'templateEditor', templateId: template.id });
+      }
+    } catch (cause) {
+      setError(extractError(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="page">
       <header className="page-header">
         <h1>{t('templates.title')}</h1>
         <div className="page-actions">
-          <button
-            className="primary"
-            disabled={busy}
-            onClick={() => void run(() => window.fillforge.templates.import())}
-          >
+          <button className="primary" disabled={busy} onClick={() => void importTemplate()}>
             {t('templates.importDocx')}
           </button>
           <button onClick={() => navigate({ page: 'newRun' })}>{t('common.newRun')}</button>
