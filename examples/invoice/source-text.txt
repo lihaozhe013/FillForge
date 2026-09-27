@@ -1,8 +1,8 @@
-Simulated OCR / plain-text output of a paper invoice.
+Text equivalent of the clean digital invoice image in this example.
 
-Paste this block into the chat together with the extraction prompt that
-FillForge generates for the "invoice" template (Templates -> invoice ->
-Prompt, or `cargo run -p fillforge-cli -- extract-fields invoice`).
+Paste this block into a multimodal AI chat together with the extraction prompt
+for the "invoice-template" template. From the repository root, generate that
+prompt with `cargo run -p fillforge-cli --bin fillforge -- extract-fields invoice-template`.
 
 --- BEGIN DOCUMENT TEXT ---
 INVOICE
@@ -14,12 +14,14 @@ Invoice number: INV-2026-00418
 Invoice date: 2026-03-17
 
 Line items
-  Widget design services                12,500.00
-  Prototype parts                       4,005.00
+  Widget design services: 12,500.00
+  Prototype parts: 4,005.00
 
-Subtotal (excl. tax):                   16,505.00
-VAT 13%:                                 2,145.50
-Total incl. tax:                        18,650.50
+Subtotal (excl. tax): 16,505.00
+VAT 13%: 2,145.65
+Total incl. tax: 18,650.65
 
-Payment due within 30 days.
+Currency: CNY
+
+Thank you for your business.
 --- END DOCUMENT TEXT ---

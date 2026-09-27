@@ -58,11 +58,11 @@ Electron version before installing the Tauri version.
 The CLI is a Rust binary and uses the same storage and application services as the desktop app:
 
 ```bash
-cargo run -p fillforge-cli -- --help
-cargo run -p fillforge-cli -- inspect-template <templateId>
-cargo run -p fillforge-cli -- extract-fields <templateId>
-cargo run -p fillforge-cli -- validate-fields <templateId> <extraction.json>
-cargo run -p fillforge-cli -- render-document <runId>
+cargo run -p fillforge-cli --bin fillforge -- --help
+cargo run -p fillforge-cli --bin fillforge -- inspect-template <templateId>
+cargo run -p fillforge-cli --bin fillforge -- extract-fields <templateId>
+cargo run -p fillforge-cli --bin fillforge -- validate-fields <templateId> <extraction.json>
+cargo run -p fillforge-cli --bin fillforge -- render-document <runId>
 ```
 
 Regenerate the TypeScript contract from the Rust domain types with:
@@ -71,10 +71,11 @@ Regenerate the TypeScript contract from the Rust domain types with:
 pnpm types:generate
 ```
 
-Set `FILLFORGE_HOME` to use a separate home root:
+Set `FILLFORGE_HOME` to use a separate home root. Import the template in the desktop app under that
+same home before running CLI commands against it.
 
 ```bash
-FILLFORGE_HOME=/tmp/fillforge-demo cargo run -p fillforge-cli -- inspect-template invoice
+FILLFORGE_HOME=/tmp/fillforge-demo cargo run -p fillforge-cli --bin fillforge -- inspect-template invoice-template
 ```
 
 ## Local storage

@@ -1,6 +1,6 @@
 schema_version: 1
 
-id: invoice
+id: invoice-template
 name: Invoice
 description: Extract invoice values and render a completed invoice
 

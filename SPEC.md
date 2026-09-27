@@ -854,10 +854,10 @@ The CLI MUST assemble the same services as the desktop application and MUST NOT 
 implementation of domain behavior. It is built as a Rust binary:
 
 ```bash
-cargo run -p fillforge-cli -- inspect-template <templateId>
-cargo run -p fillforge-cli -- extract-fields <templateId>
-cargo run -p fillforge-cli -- validate-fields <templateId> <extraction.json>
-cargo run -p fillforge-cli -- render-document <runId>
+cargo run -p fillforge-cli --bin fillforge -- inspect-template <templateId>
+cargo run -p fillforge-cli --bin fillforge -- extract-fields <templateId>
+cargo run -p fillforge-cli --bin fillforge -- validate-fields <templateId> <extraction.json>
+cargo run -p fillforge-cli --bin fillforge -- render-document <runId>
 ```
 
 Command semantics:

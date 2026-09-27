@@ -258,8 +258,8 @@ Execute these steps in order:
    root with Rust stable installed):
 
    ```bash
-   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli -- inspect-template <TEMPLATE_ID>
-   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli -- extract-fields <TEMPLATE_ID>
+   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli --bin fillforge -- inspect-template <TEMPLATE_ID>
+   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli --bin fillforge -- extract-fields <TEMPLATE_ID>
    ```
 
    `inspect-template` must report every placeholder with **zero unconfigured placeholders and zero
@@ -270,7 +270,7 @@ Execute these steps in order:
    plausible values for every field to a scratch file, then run:
 
    ```bash
-   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli -- validate-fields <TEMPLATE_ID> <sample.json>
+   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli --bin fillforge -- validate-fields <TEMPLATE_ID> <sample.json>
    ```
 
    It must report no issues and print normalized values. If any rule rejects a realistic value,

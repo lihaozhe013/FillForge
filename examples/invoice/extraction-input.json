@@ -20,8 +20,8 @@
     "evidence": "Buyer: Contoso Studio LLC"
   },
   "total_amount": {
-    "value": 18650.5,
+    "value": 18650.65,
     "status": "found",
-    "evidence": "Total incl. tax: 18,650.50"
+    "evidence": "Total incl. tax: 18,650.65"
   }
 }

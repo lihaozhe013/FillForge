@@ -100,8 +100,8 @@ Amount in words: {total_amount_uppercase}
 Save the document as a DOCX file, for example invoice-template.docx. FillForge copies this file when
 you import it, so you can move or delete the original after import.
 
-A ready-made copy of this example document, together with the configuration written in section 4.2,
-ships in the repository under [examples/invoice](../examples/README.md).
+A ready-made copy of this example document, its configuration, and a source image ships in the
+repository under [examples/invoice](../examples/README.md).
 
 ### 3.2 Placeholder rules
 
@@ -211,14 +211,14 @@ YAML is indentation-sensitive:
 
 ### 4.2 Complete invoice example
 
-The following configuration matches the Word example above. The identical pair (this YAML plus a
-fillable DOCX) is checked in under [examples/invoice](../examples/README.md), so you can import it
-instead of typing it out:
+The following configuration matches the Word example above. The files are checked in under
+[examples/invoice](../examples/README.md), so you can import the DOCX and apply this configuration.
+Importing `invoice-template.docx` generates the template ID `invoice-template` from its filename.
 
 ```yaml
 schema_version: 1
 
-id: invoice
+id: invoice-template
 name: Invoice
 description: Extract invoice values and render a completed invoice
 
@@ -631,29 +631,29 @@ For the invoice example, a valid response could be:
 ```json
 {
   "invoice_number": {
-    "value": "INV-20260917",
+    "value": "INV-2026-00418",
     "status": "found",
-    "evidence": "Invoice number: INV-20260917"
+    "evidence": "Invoice number: INV-2026-00418"
   },
   "invoice_date": {
-    "value": "2026-09-17",
+    "value": "2026-03-17",
     "status": "found",
-    "evidence": "Invoice date: 2026-09-17"
+    "evidence": "Invoice date: 2026-03-17"
   },
   "seller_name": {
-    "value": "Northwind Supplies",
+    "value": "Northwind Trading Co., Ltd.",
     "status": "found",
-    "evidence": "Seller: Northwind Supplies"
+    "evidence": "Seller: Northwind Trading Co., Ltd."
   },
   "buyer_name": {
-    "value": "Contoso Retail",
+    "value": "Contoso Studio LLC",
     "status": "found",
-    "evidence": "Buyer: Contoso Retail"
+    "evidence": "Buyer: Contoso Studio LLC"
   },
   "total_amount": {
-    "value": 1234.5,
+    "value": 18650.65,
     "status": "found",
-    "evidence": "Total amount: 1,234.50"
+    "evidence": "Total incl. tax: 18,650.65"
   }
 }
 ```
@@ -664,9 +664,9 @@ Some tools wrap JSON in a Markdown fence. FillForge accepts this form:
 ```json
 {
   "invoice_number": {
-    "value": "INV-20260917",
+    "value": "INV-2026-00418",
     "status": "found",
-    "evidence": "Invoice number: INV-20260917"
+    "evidence": "Invoice number: INV-2026-00418"
   }
 }
 ```
@@ -729,13 +729,13 @@ Example review record:
   "schema_version": 1,
   "fields": {
     "invoice_number": {
-      "model_value": "INV-20260917",
-      "final_value": "INV-20260917",
+      "model_value": "INV-2026-00418",
+      "final_value": "INV-2026-00418",
       "decision": "accepted"
     },
     "total_amount": {
-      "model_value": 1234.5,
-      "final_value": 1234.5,
+      "model_value": 18650.65,
+      "final_value": 18650.65,
       "decision": "accepted"
     }
   }
@@ -830,19 +830,20 @@ than silently rewritten.
 The Rust CLI uses the same services as the desktop application:
 
 ```bash
-cargo run -p fillforge-cli -- inspect-template <templateId>
-cargo run -p fillforge-cli -- extract-fields <templateId>
-cargo run -p fillforge-cli -- validate-fields <templateId> <extraction.json>
-cargo run -p fillforge-cli -- render-document <runId>
+cargo run -p fillforge-cli --bin fillforge -- inspect-template <templateId>
+cargo run -p fillforge-cli --bin fillforge -- extract-fields <templateId>
+cargo run -p fillforge-cli --bin fillforge -- validate-fields <templateId> <extraction.json>
+cargo run -p fillforge-cli --bin fillforge -- render-document <runId>
 ```
 
 The extraction JSON supplied to validate-fields is the unwrapped AI response, not the persisted
 extraction.json wrapper.
 
-Use an isolated root:
+Use an isolated root after importing the template with the desktop app configured to use the same
+`FILLFORGE_HOME` value:
 
 ```bash
-FILLFORGE_HOME=/tmp/fillforge-demo cargo run -p fillforge-cli -- inspect-template invoice
+FILLFORGE_HOME=/tmp/fillforge-demo cargo run -p fillforge-cli --bin fillforge -- inspect-template invoice-template
 ```
 
 Command output:

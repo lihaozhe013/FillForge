@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1800" viewBox="0 0 1400 1800">
+  <rect width="1400" height="1800" fill="#eef2f6"/>
+  <rect x="86" y="70" width="1228" height="1660" rx="20" fill="#ffffff"/>
+
+  <rect x="150" y="145" width="64" height="64" rx="12" fill="#245c87"/>
+  <path d="M166 190v-27h8l8 13 8-13h8v27h-8v-14l-8 12-8-12v14z" fill="#ffffff"/>
+  <text x="238" y="174" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#17324a">Northwind Trading Co., Ltd.</text>
+  <text x="238" y="207" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#66788a">Seller</text>
+
+  <text x="1248" y="178" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" letter-spacing="3" fill="#17324a">INVOICE</text>
+  <text x="1248" y="214" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="2" fill="#6f8090">SALES DOCUMENT</text>
+
+  <line x1="150" y1="258" x2="1250" y2="258" stroke="#d9e1e8" stroke-width="2"/>
+
+  <text x="150" y="315" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.3" fill="#718294">INVOICE NUMBER</text>
+  <text x="150" y="359" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="600" fill="#20384e">INV-2026-00418</text>
+  <text x="705" y="315" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.3" fill="#718294">INVOICE DATE</text>
+  <text x="705" y="359" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="600" fill="#20384e">2026-03-17</text>
+
+  <rect x="150" y="407" width="1100" height="158" rx="12" fill="#f5f8fb"/>
+  <text x="184" y="453" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.3" fill="#718294">BILL TO</text>
+  <text x="184" y="498" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600" fill="#20384e">Contoso Studio LLC</text>
+  <text x="184" y="531" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#66788a">Buyer</text>
+
+  <text x="150" y="636" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.3" fill="#718294">DESCRIPTION</text>
+  <text x="1248" y="636" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.3" fill="#718294">AMOUNT (CNY)</text>
+  <line x1="150" y1="662" x2="1250" y2="662" stroke="#b9c7d3" stroke-width="2"/>
+
+  <text x="150" y="718" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#263e53">Widget design services</text>
+  <text x="1248" y="718" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#263e53">12,500.00</text>
+  <line x1="150" y1="750" x2="1250" y2="750" stroke="#e5ebf0" stroke-width="1.5"/>
+
+  <text x="150" y="806" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#263e53">Prototype parts</text>
+  <text x="1248" y="806" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#263e53">4,005.00</text>
+  <line x1="150" y1="838" x2="1250" y2="838" stroke="#e5ebf0" stroke-width="1.5"/>
+
+  <text x="780" y="930" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#66788a">Subtotal (excluding tax)</text>
+  <text x="1248" y="930" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#263e53">16,505.00</text>
+  <text x="780" y="982" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#66788a">VAT (13%)</text>
+  <text x="1248" y="982" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#263e53">2,145.65</text>
+  <line x1="780" y1="1012" x2="1250" y2="1012" stroke="#b9c7d3" stroke-width="2"/>
+
+  <rect x="760" y="1040" width="490" height="126" rx="12" fill="#edf5fa"/>
+  <text x="792" y="1089" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.2" fill="#58758d">TOTAL INCLUDING TAX</text>
+  <text x="1215" y="1136" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#174c73">18,650.65</text>
+
+  <line x1="150" y1="1370" x2="1250" y2="1370" stroke="#d9e1e8" stroke-width="2"/>
+  <text x="150" y="1420" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#66788a">Thank you for your business.</text>
+  <text x="1250" y="1420" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#8291a0">Currency: CNY</text>
+</svg>
