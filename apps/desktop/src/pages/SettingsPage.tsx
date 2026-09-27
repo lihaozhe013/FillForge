@@ -1,4 +1,4 @@
-import type { ResolvedAppConfig } from '@fillforge/schema';
+import type { ResolvedAppConfig } from '../lib/generated-types';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';

@@ -1,0 +1,20 @@
+[package]
+name = "fillforge-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "fillforge"
+path = "src/main.rs"
+
+[[bin]]
+name = "export-types"
+path = "src/bin/export-types.rs"
+
+[dependencies]
+fillforge-domain = { path = "../fillforge-domain" }
+fillforge-docx = { path = "../fillforge-docx" }
+indexmap.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true

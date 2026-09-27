@@ -1,128 +1,82 @@
 # FillForge
 
-FillForge is a local-first desktop application for configuring DOCX templates, importing structured
-values produced by an external AI tool, reviewing those values, and rendering deterministic
-Microsoft Word documents.
+FillForge is a local-first desktop application for configuring DOCX templates, importing values
+produced by an external AI tool, reviewing those values, and rendering Microsoft Word documents.
+The application does not call model providers or upload source documents.
 
-The MVP intentionally uses a manual AI handoff: FillForge generates the prompt and expected JSON,
-the user runs them with a multimodal model of choice, and the user pastes the JSON back into the
-application. No model provider is called by the application.
+The desktop app uses Tauri 2 with a React/Vite interface and a Rust backend. Tauri uses the operating
+system WebView on Windows and macOS; the packaged application does not include Node.js or Chromium.
+The Rust domain services are shared by the desktop app and the CLI. See [SPEC.md](SPEC.md) for the
+product contract and [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for template authoring and app usage.
 
-[SPEC.md](SPEC.md) is the normative project specification. The detailed
-[User Guide](docs/USER_GUIDE.md) covers Word template authoring, template.yaml configuration,
-extraction JSON, review, rendering, and troubleshooting. This README covers the shortest path from
-checkout to a working development environment.
+## Current capabilities
 
-## Status
+- Import DOCX templates and discover single-brace placeholders, including placeholders split across
+  Word runs and located in the document body, headers, or footers.
+- Configure fields, extraction instructions, validation, normalization, and placeholder bindings in
+  YAML.
+- Generate a deterministic prompt and expected JSON structure for an external AI tool.
+- Import and validate extracted JSON, review or correct the values, and render formatted DOCX files.
+- Keep prompts, extraction results, reviews, and versioned output files in inspectable local storage.
+- Use the same Rust business services through the desktop UI or the four CLI commands.
 
-The MVP vertical slice is implemented and tested:
+## Development requirements
 
-- Electron 44 desktop app with React, Vite, TypeScript, sandboxed preload, and typed IPC.
-- DOCX import that inspects simple placeholders across Word XML run boundaries and creates matching
-  fields and bindings automatically.
-- YAML-backed template definitions for fields, extraction instructions, validation, normalization,
-  and bindings.
-- Deterministic extraction prompts and expected JSON previews.
-- Fenced or plain JSON import with schema and semantic validation.
-- Review records that preserve model values separately from human final values.
-- Versioned, filesystem-backed run artifacts and DOCX outputs.
-- CLI commands that reuse the desktop application services.
-- Settings for theme, advanced editor fields, and prompt version.
-- English user documentation available from the Help menu and GitHub.
-- A complete end-to-end example template (DOCX + YAML + sample extraction JSON) under
-  [examples/](examples/README.md), exercised by the integration tests.
+- Node.js 26.x or later and pnpm for the React/Vite build.
+- Rust stable for the desktop backend and CLI.
+- Tauri's native platform prerequisites for local desktop packaging. Windows uses WebView2; macOS
+  uses WKWebView.
 
-## MVP workflow
-
-```text
-DOCX template
-    ↓
-Automatically create fields and bindings from placeholders
-    ↓
-Generate prompt and expected JSON
-    ↓
-Run the prompt with an external AI tool
-    ↓
-Paste and validate the returned JSON
-    ↓
-Review, correct, or fill values
-    ↓
-Normalize, bind, and render DOCX
-```
-
-A run keeps the prompt, original extraction, review, normalized record, copied source evidence, and
-all generated outputs so the operation can be inspected or resumed later.
-
-## Prerequisites
-
-- Node.js 26.x or later; Node 26 is the project baseline.
-- pnpm.
-- No database, Docker service, Python runtime, Java runtime, or LibreOffice installation is needed
-  for MVP development.
-
-The repository uses pnpm exclusively and must retain pnpm-lock.yaml.
-
-## Development
+Node.js is a build-time requirement. It is not needed to run an installed FillForge application.
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-The root quality commands are:
+Useful build and verification commands:
 
 ```bash
-pnpm build
 pnpm typecheck
-pnpm lint
-pnpm format
-pnpm format:check
-pnpm test
-pnpm test:watch
+cargo check --workspace
+pnpm build:win:x64       # Windows x64 NSIS installer
+pnpm build:mac:arm64     # macOS ARM DMG
 ```
 
-Before submitting a change that affects application behavior, run:
+The GitHub workflow builds both installers and uploads them as workflow artifacts. A push to the
+`publish` branch also updates the `nightly` prerelease; a manual workflow run only creates artifacts.
 
-```bash
-pnpm test
-pnpm typecheck
-pnpm lint
-pnpm format:check
-pnpm build
-```
-
-## Examples
-
-[examples/invoice/](examples/invoice/README.md) ships a ready-made Word template together with its
-`template.yaml`, a simulated source document, and a sample extraction JSON. It mirrors the User
-Guide walkthrough, is validated by `tests/integration/examples.test.ts` on every test run, and can
-be imported directly to try the full workflow:
-
-```bash
-pnpm fixtures  # regenerate the example DOCX (and test fixtures) after editing examples/make-example.ts
-```
+When moving from the old Electron installer to the Tauri installer on Windows, uninstall the
+Electron version before installing the Tauri version.
 
 ## CLI
 
-The CLI uses the same services as the desktop app:
+The CLI is a Rust binary and uses the same storage and application services as the desktop app:
 
 ```bash
-pnpm tsx packages/tools/src/index.ts inspect-template <templateId>
-pnpm tsx packages/tools/src/index.ts extract-fields <templateId>
-pnpm tsx packages/tools/src/index.ts validate-fields <templateId> <extraction.json>
-pnpm tsx packages/tools/src/index.ts render-document <runId>
+cargo run -p fillforge-cli -- --help
+cargo run -p fillforge-cli -- inspect-template <templateId>
+cargo run -p fillforge-cli -- extract-fields <templateId>
+cargo run -p fillforge-cli -- validate-fields <templateId> <extraction.json>
+cargo run -p fillforge-cli -- render-document <runId>
 ```
 
-Set FILLFORGE_HOME to an isolated logical home root for tests or portable runs:
+Regenerate the TypeScript contract from the Rust domain types with:
 
 ```bash
-FILLFORGE_HOME=/tmp/fillforge-test pnpm test
+pnpm types:generate
 ```
 
-## Filesystem storage
+Set `FILLFORGE_HOME` to use a separate home root:
 
-FillForge has no SQL or embedded database. The filesystem is the canonical source of truth and every
-domain artifact is an ordinary inspectable file.
+```bash
+FILLFORGE_HOME=/tmp/fillforge-demo cargo run -p fillforge-cli -- inspect-template invoice
+```
+
+## Local storage
+
+The filesystem is the canonical source of truth. The existing Electron data layout and schema version
+remain unchanged, so Tauri opens existing templates and runs in place without a bulk migration.
 
 ```text
 <home>/.config/fillforge/config.yaml
@@ -146,65 +100,48 @@ domain artifact is an ordinary inspectable file.
 └── logs/
 ```
 
-Configuration is stored under .config/fillforge. Application data is stored under .local/fillforge.
-FILLFORGE_HOME changes the home root while preserving this layout. Templates and source evidence are
-copied into application-owned directories; original files are not modified.
+`FILLFORGE_HOME` changes the home root while preserving this layout. Templates and source evidence are
+copied into application-owned directories; original files are not modified. Prompt and extraction
+artifacts are immutable. Human corrections live in `review.json`, and `normalized.json` is rebuilt
+when review data changes. Each render retains a numbered result and updates `result.docx` to mirror
+the newest output.
 
-Prompt and extraction artifacts are immutable. Human corrections live in review.json, and
-normalized.json is rebuilt when review data changes. Each render retains a versioned result and
-updates result.docx to mirror the newest result.
+Development builds write the summary log to `debug-logs/debug.log` and feature logs to
+`debug-logs/debug-{feature}.log`. Packaged builds write logs under the data directory's `logs/`.
+Each log rotates at 2 MiB and retains one previous session.
 
-## Architecture
+## Repository layout
 
 ```text
-apps/desktop
-├── electron/       main process, preload, dialogs, and typed IPC
-└── src/            React renderer
-
-packages/
-├── schema/         Zod contracts and domain types
-├── core/           paths, atomic writes, config, IDs, and errors
-├── docx/           renderer boundary and Docxtemplater adapter
-├── templates/      template repository, inspection, and bindings
-├── extraction/     prompt, parser, validation, and normalization
-├── runs/           run artifacts, review, and render orchestration
-└── tools/          CLI commands over the same services
+apps/desktop/                 React/Vite interface and Tauri configuration
+apps/desktop/src-tauri/       Tauri commands, native menus, dialogs, and logging
+crates/fillforge-domain/      Shared Rust models, persistence, templates, extraction, and runs
+crates/fillforge-docx/        Rust DOCX inspection and rendering adapter
+crates/fillforge-cli/         CLI and TypeScript contract generator
+examples/                     Invoice template and sample extraction data
 ```
 
-The renderer has no unrestricted Node.js or filesystem access. The main process validates IPC
-payloads before invoking application services. DOCX rendering is deterministic and Docxtemplater is
-isolated behind the DocumentRenderer interface.
-
-## Scope boundaries
-
-The MVP does not include direct model-provider APIs, OCR, embeddings, RAG, cloud storage, accounts,
-authentication, telemetry, analytics, collaboration, sync, agent runtimes, MCP servers, browser
-automation, automatic uploads, or automatic email sending.
-
-Future integrations must use the existing typed service boundaries and preserve the filesystem,
-review, validation, and rendering invariants defined in [SPEC.md](SPEC.md).
+The DOCX engine is `xamgore/docx-template`, pinned to a Git revision in Cargo. Its rendering adapter
+checks placeholders before rendering and preserves the original document package and formatting.
+Values, including booleans, are rendered as text. Unsupported template tags are reported and block
+rendering.
 
 ## Documentation
 
-The desktop application's Help menu provides:
+- [User Guide](docs/USER_GUIDE.md)
+- [AI Agent Prompt](docs/AI_AGENT_PROMPT.md)
+- [Project Specification](SPEC.md)
+- [Invoice example](examples/README.md)
 
-- [User Guide](https://github.com/lihaozhe013/FillForge/blob/main/docs/USER_GUIDE.md)
-- [AI Agent Prompt](https://github.com/lihaozhe013/FillForge/blob/main/docs/AI_AGENT_PROMPT.md)
-- [Project Specification](https://github.com/lihaozhe013/FillForge/blob/main/SPEC.md)
-- [FillForge on GitHub](https://github.com/lihaozhe013/FillForge)
+## Privacy and scope
 
-The User Guide is also available locally at [docs/USER_GUIDE.md](docs/USER_GUIDE.md). The AI Agent
-Prompt is a self-contained super prompt that lets a coding agent analyze an existing Word document
-and generate the complete template pair (DOCX + template.yaml) directly into the FillForge data
-directory, leaving only acceptance to be done in the application.
+Documents, prompts, extraction results, and rendered files stay local by default. FillForge does not
+upload source evidence or call model APIs automatically. Logs must not contain complete documents,
+image or PDF contents, credentials, or API keys.
 
-## Privacy
-
-- Documents, prompts, extraction results, and rendered files stay local by default.
-- FillForge does not upload source evidence or call model APIs automatically.
-- Logs must not contain complete documents, image/PDF contents, credentials, or API keys.
-- Any future external transmission must be explicit in the UI and have an approved secret-storage
-  design.
+The MVP does not include OCR, embeddings, RAG, cloud storage, accounts, authentication, telemetry,
+analytics, collaboration, sync, agent runtimes, MCP servers, browser automation, automatic uploads,
+or automatic email sending.
 
 ## License
 

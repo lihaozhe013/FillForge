@@ -2,7 +2,7 @@ Simulated OCR / plain-text output of a paper invoice.
 
 Paste this block into the chat together with the extraction prompt that
 FillForge generates for the "invoice" template (Templates -> invoice ->
-Prompt, or `pnpm tsx packages/tools/src/index.ts extract-fields invoice`).
+Prompt, or `cargo run -p fillforge-cli -- extract-fields invoice`).
 
 --- BEGIN DOCUMENT TEXT ---
 INVOICE

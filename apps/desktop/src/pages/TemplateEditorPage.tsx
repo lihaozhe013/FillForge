@@ -1,4 +1,4 @@
-import type { FieldDefinition, PlaceholderReport, TemplateSchema } from '@fillforge/schema';
+import type { FieldDefinition, PlaceholderReport, TemplateSchema } from '../lib/generated-types';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';

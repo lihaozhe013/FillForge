@@ -1,0 +1,26 @@
+[workspace]
+members = [
+  "crates/fillforge-domain",
+  "crates/fillforge-docx",
+  "crates/fillforge-cli",
+  "apps/desktop/src-tauri"
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.82"
+
+[workspace.dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+indexmap = { version = "2", features = ["serde"] }
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml_ng = "0.10"
+thiserror = "2"
+ts-rs = { version = "12", features = ["serde-compat", "serde-json-impl", "indexmap-impl"] }
+ulid = { version = "1", features = ["serde"] }
+unicode-normalization = "0.1"

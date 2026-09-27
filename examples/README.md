@@ -32,20 +32,13 @@ The template renders one invoice value into several placeholders: `invoice_date`
    or skip straight to importing `invoice/extraction-input.json`.
 5. Accept the reviewed values and render; the result DOCX shows the filled table.
 
-## Verify with the test suite
+## Verify from the CLI
 
-`tests/integration/examples.test.ts` imports this exact set of files, inspects the DOCX, generates
-the prompt, imports the extraction JSON, reviews, renders, and asserts the output text. Examples
-therefore stay correct automatically:
-
-```sh
-pnpm test
-```
-
-## Regenerating the DOCX
-
-`invoice/invoice-template.docx` is produced byte-for-byte by `examples/make-example.ts`:
+Import the DOCX, apply `template.yaml`, and set the template ID to `invoice` in the desktop app. Set
+`FILLFORGE_HOME` to the same home directory when launching the app and running the CLI; FillForge
+stores its data under `$FILLFORGE_HOME/.local/fillforge`.
 
 ```sh
-pnpm fixtures
+FILLFORGE_HOME=/tmp/fillforge-example cargo run -p fillforge-cli -- inspect-template invoice
+FILLFORGE_HOME=/tmp/fillforge-example cargo run -p fillforge-cli -- extract-fields invoice
 ```

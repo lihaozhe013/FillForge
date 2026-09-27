@@ -1,4 +1,4 @@
-import type { RunSummary } from '@fillforge/schema';
+import type { RunSummary } from '../lib/generated-types';
 import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section, StatusBadge } from '../components/ui';

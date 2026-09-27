@@ -26,7 +26,7 @@ The keywords below are normative:
 - **MAY**: optional and compatible with this specification.
 
 This document is the normative specification. The README is an operational guide and MUST remain
-consistent with this document. Code and tests are the executable implementation of the requirements.
+consistent with this document. The Rust and TypeScript source is the executable implementation of the requirements.
 
 ## 2. Product scope
 
@@ -52,7 +52,7 @@ The MVP MUST support this complete local workflow:
 
 | ID        | Requirement                                                                                   | Status      |
 | --------- | --------------------------------------------------------------------------------------------- | ----------- |
-| FF-MVP-01 | Electron desktop application with React, Vite, and typed preload IPC                          | Implemented |
+| FF-MVP-01 | Tauri 2 desktop application with React, Vite, and typed invoke API                                | Implemented |
 | FF-MVP-02 | DOCX import and run-safe placeholder inspection                                               | Implemented |
 | FF-MVP-03 | YAML-backed template and field configuration                                                  | Implemented |
 | FF-MVP-04 | Deterministic prompt and expected JSON generation                                             | Implemented |
@@ -106,26 +106,24 @@ rendering.
 
 ### 4.1 Required stack
 
-| Concern                       | Requirement                                                |
-| ----------------------------- | ---------------------------------------------------------- |
-| Package manager               | pnpm only                                                  |
-| External runtime              | Node.js 26.x; the root engine requirement is Node.js >= 26 |
-| Language                      | TypeScript 7.x with strict type checking                   |
-| Desktop runtime               | Electron 44.x                                              |
-| Renderer UI                   | React 19 and Vite                                          |
-| Runtime validation            | Zod                                                        |
-| Human-authored persistence    | YAML                                                       |
-| Machine-generated persistence | JSON                                                       |
-| DOCX engine                   | Docxtemplater behind a FillForge renderer interface        |
-| DOCX archive support          | PizZip                                                     |
-| Tests                         | Vitest                                                     |
+| Concern                       | Requirement                                                           |
+| ----------------------------- | --------------------------------------------------------------------- |
+| Package manager               | pnpm for the frontend workspace                                       |
+| Build-time JavaScript runtime | Node.js 26.x or later                                                 |
+| Desktop runtime               | Tauri 2 and Rust stable                                               |
+| Renderer UI                   | React 19 and Vite                                                     |
+| Renderer contracts            | TypeScript generated from Rust domain types                           |
+| Native WebView                | Windows WebView2 and macOS WKWebView supplied by the operating system |
+| Human-authored persistence    | YAML                                                                  |
+| Machine-generated persistence | JSON                                                                  |
+| DOCX engine                   | Rust `docx-template` at a fixed Git revision                          |
+| Installer targets             | Windows x64 NSIS and macOS ARM DMG                                     |
+| Updates                       | Manual download and installation; no in-app updater                   |
 
-The repository MUST contain pnpm-lock.yaml. It MUST NOT contain package-lock.json, yarn.lock,
-bun.lock, bun.lockb, or a second package manager configuration.
-
-Electron embeds its own Node runtime. Main-process and preload code MUST remain compatible with the
-Node runtime shipped by the selected Electron version and MUST NOT assume Node 26-only APIs. Node 26
-is the baseline for development tools, tests, builds, and the external CLI.
+Node.js and pnpm are build-time requirements only. Installed applications MUST NOT require Node.js
+or bundle Chromium. The Rust workspace MUST contain Cargo.lock. The repository MUST contain
+pnpm-lock.yaml and MUST NOT contain package-lock.json, yarn.lock, bun.lock, bun.lockb, or a second
+JavaScript package manager configuration.
 
 ### 4.2 Required quality commands
 
@@ -138,74 +136,73 @@ pnpm typecheck
 pnpm lint
 pnpm format
 pnpm format:check
-pnpm test
-pnpm test:watch
+cargo check --workspace
+pnpm build:win:x64
+pnpm build:mac:arm64
 ```
 
-A change is ready for review only when the relevant quality commands pass. Changes to domain,
-persistence, IPC, or rendering code SHOULD run the full set.
+The migration CI MUST typecheck the interface, compile the Rust workspace, and build both target
+installers. It MUST NOT run automated tests. Release-level acceptance also requires manual checks of
+existing templates and runs, DOCX rendering, and all four CLI commands.
 
 ### 4.3 Platform policy
 
-The canonical storage layout MUST be identical on Linux, macOS, and Windows. The implementation MUST
-NOT silently replace it with AppData, Application Support, Electron userData, or another
-platform-specific application-data root.
+The canonical storage layout MUST be identical on supported platforms and MUST NOT be silently
+replaced with AppData, Application Support, or another platform-specific application-data root.
+The first packaged targets are Windows x64 NSIS and macOS ARM DMG. Packages are unsigned and
+macOS packages are not notarized. Users download and install updates manually. Before installing the
+Tauri package on Windows, users MUST uninstall the previous Electron package.
 
-The application MAY use native Electron dialogs and shell integration for user-selected files. Those
-APIs MUST NOT redefine canonical storage.
+Tauri MUST use the operating system's WebView and MUST NOT package a Chromium runtime. Native dialogs,
+system file operations, menus, and logging MUST remain in the Rust desktop process.
 
 ## 5. Architecture and package boundaries
 
 ### 5.1 Runtime boundary
 
 ```text
-React renderer
+React renderer (WebView)
       │
-      │ narrow typed contextBridge API
+      │ typed Tauri invoke API
       ▼
-Electron preload
-      │
-      │ validated IPC
-      ▼
-Electron main
+Tauri commands and native services (Rust)
       │
       ▼
-Application services
-      ├── schema
-      ├── core filesystem and configuration
-      ├── templates
-      ├── extraction
-      ├── runs
-      └── DOCX renderer
+Shared Rust domain services
+      ├── configuration and filesystem storage
+      ├── templates and placeholder inspection
+      ├── extraction, validation, and normalization
+      ├── run lifecycle and review
+      └── DOCX inspection and rendering adapter
+
+Rust CLI ────────────────┘
 ```
 
-The renderer MUST NOT have unrestricted Node.js or filesystem access. Domain logic MUST NOT depend
-on React, Electron, or renderer state.
+The renderer MUST NOT have unrestricted Node.js, shell, or filesystem access. Domain logic MUST NOT
+depend on React, Tauri command state, or renderer state. The same domain services MUST serve the
+Tauri commands and CLI.
 
 ### 5.2 Workspace responsibilities
 
-| Package or directory  | Responsibility                                                              | Required boundary                                          |
-| --------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| packages/schema       | Zod schemas and shared domain types                                         | No filesystem or Electron dependency                       |
-| packages/core         | Paths, atomic writes, filesystem helpers, IDs, configuration, domain errors | Canonical storage and safety primitives                    |
-| packages/docx         | DocumentRenderer interface and Docxtemplater implementation                 | Docxtemplater types do not leak into domain packages       |
-| packages/templates    | Template repository, import, inspection report, and bindings                | Owns template lifecycle                                    |
-| packages/extraction   | Prompt generation, result parsing, validation, and normalization            | Provider-neutral extraction logic                          |
-| packages/runs         | Run repository, artifact lifecycle, review, and rendering orchestration     | Owns run lifecycle and immutability rules                  |
-| packages/tools        | CLI commands over the same application services                             | Must not duplicate business rules                          |
-| apps/desktop/electron | Main process, preload, IPC validation, dialogs, and safe shell operations   | Only renderer-facing process with direct filesystem access |
-| apps/desktop/src      | React views and renderer state                                              | Must use the preload API                                   |
+| Package or directory          | Responsibility                                                         | Required boundary                         |
+| ----------------------------- | ---------------------------------------------------------------------- | ----------------------------------------- |
+| `crates/fillforge-domain`     | Models, paths, persistence, configuration, templates, extraction, runs | Shared business rules; no UI dependency   |
+| `crates/fillforge-docx`       | DOCX placeholder inspection and Rust rendering adapter                | DOCX implementation types stay in crate   |
+| `crates/fillforge-cli`        | Four CLI commands and TypeScript type generation                      | Calls shared Rust domain services         |
+| `apps/desktop/src-tauri`      | Tauri commands, dialogs, menu, opener, logging, and packaging          | Native access stays in desktop process    |
+| `apps/desktop/src`            | React views, renderer state, bridge, generated types                   | Calls only the documented invoke API     |
 
 ### 5.3 Dependency rules
 
-1. Shared contracts belong in packages/schema.
-2. Filesystem access belongs in packages/core or an explicitly owned repository.
-3. UI code MUST call application operations through the preload API.
+1. Shared business rules and persisted models belong in `crates/fillforge-domain`.
+2. Filesystem access belongs in the domain repositories or explicitly owned Tauri services.
+3. UI code MUST call application operations through the Tauri invoke bridge.
 4. CLI commands MUST call the same services as the desktop application.
-5. Provider-specific AI code MUST NOT be added to the domain packages.
-6. A database repository, cloud service, agent runtime, or MCP server MUST NOT be introduced without
+5. TypeScript contracts MUST be generated from Rust domain types and MUST NOT be edited manually.
+6. Provider-specific AI code MUST NOT be added to the domain crate.
+7. A database repository, cloud service, agent runtime, or MCP server MUST NOT be introduced without
    an explicit product decision.
-7. Files over 1,000 lines MUST be considered for decomposition before adding a new responsibility.
+8. Files over 1,000 lines MUST be considered for decomposition before adding a new responsibility.
 
 ## 6. Canonical persistence
 
@@ -226,7 +223,7 @@ A rebuildable cache MAY be added later, but it MUST remain disposable and non-ca
 
 ### 6.2 Canonical paths
 
-The path module in packages/core/src/paths.ts MUST be the single source of truth.
+The path module in `crates/fillforge-domain/src/paths.rs` MUST be the single source of truth.
 
 ```text
 <home>/.config/fillforge/config.yaml
@@ -242,8 +239,9 @@ The home root is resolved from the FILLFORGE_HOME environment variable when pres
 resolved with the operating system home-directory API. FILLFORGE_HOME overrides the logical home
 root, not the layout beneath it.
 
-The application MUST be able to initialize this layout without deleting existing data. Tests MUST
-use an isolated root and MUST NOT write to the developer's real FillForge directories.
+The application MUST initialize this layout without deleting existing data. Development and
+validation workflows SHOULD use an isolated `FILLFORGE_HOME` root and MUST NOT write to unrelated
+FillForge data directories.
 
 ### 6.3 Directory layout
 
@@ -305,7 +303,7 @@ On load, the application MUST:
 
 1. Parse the file.
 2. Reject an explicitly unsupported newer schema version.
-3. Validate the parsed value with the corresponding Zod schema.
+3. Validate the parsed value against the corresponding Rust domain model and semantic rules.
 4. Reject an ID that does not match its containing directory where applicable.
 5. Avoid silently rewriting files on application startup.
 
@@ -395,7 +393,7 @@ instructions MAY use any language.
 
 ### 7.3 DOCX placeholders and inspection
 
-DOCX placeholders MUST use Docxtemplater-compatible names such as:
+DOCX placeholders use single braces and simple lowercase English keys:
 
 ```text
 {invoice_number}
@@ -403,18 +401,21 @@ DOCX placeholders MUST use Docxtemplater-compatible names such as:
 {total_amount}
 ```
 
-Automatic import and sync MUST accept simple lowercase English keys matching
-`^[a-z][a-z0-9_]*$`. Tags with filters, loops, conditions, spaces, or other expressions MUST be
-reported as unsupported and MUST prevent import or sync from writing a template.
+Automatic import and sync MUST accept keys matching `^[a-z][a-z0-9_]*$`. Tags with filters, loops,
+conditions, spaces, or other expressions MUST be reported as unsupported and MUST prevent rendering.
+The checker MUST detect placeholders split across Word XML runs and inspect the document body,
+headers, and footers. A naive regular expression over a single raw XML string is not sufficient.
 
-The inspection implementation MUST be DOCX-aware and MUST detect a visible placeholder split across
-Word XML runs. A naive regular expression over a single raw XML string is not sufficient.
+The Rust DOCX adapter MUST use the fixed `xamgore/docx-template` Git revision, preserve the original
+document formatting, and convert values such as booleans to text before rendering. Missing and null
+values render as empty text. Unsupported tags MUST produce a clear validation error.
 
 Inspection returns:
 
 - placeholders: every discovered placeholder, returned in normalized key order;
 - unconfigured: discovered placeholders with no binding entry;
 - unreferenced: configured fields not referenced by a binding for a discovered placeholder.
+- unsupportedTags: non-empty tags outside the simple placeholder grammar.
 
 A configured field and a DOCX placeholder are separate concepts. A one-to-one mapping is permitted
 but MUST NOT be assumed by the domain model.
@@ -571,26 +572,11 @@ Normalization is deterministic and best-effort:
 
 ### 7.9 Document renderer boundary
 
-The DOCX implementation MUST be hidden behind this domain boundary:
-
-```ts
-export interface TemplateInspection {
-  placeholders: string[];
-}
-
-export interface RenderInput {
-  document: Uint8Array;
-  values: Record<string, unknown>;
-}
-
-export interface DocumentRenderer {
-  inspect(document: Uint8Array): Promise<TemplateInspection>;
-  render(input: RenderInput): Promise<Uint8Array>;
-}
-```
-
-Docxtemplater and PizZip MAY be used inside packages/docx. Their implementation types MUST NOT
-become part of the template, extraction, or run contracts.
+The Rust domain crate MUST depend on a renderer boundary that accepts document bytes and normalized
+values and returns rendered bytes. The DOCX adapter MUST remain in `crates/fillforge-docx`; its
+implementation types MUST NOT become part of template, extraction, or run persistence contracts.
+The adapter MUST support placeholders in the body, headers, footers, and tables, including markers
+split across Word runs.
 
 ### 7.10 Binding transforms
 
@@ -647,7 +633,7 @@ placeholder unresolved for validation to report before rendering.
 
 1. The input MUST be raw JSON or JSON surrounded by an obvious json Markdown fence.
 2. The parser MUST reject malformed JSON with a safe parse error.
-3. The parser MUST validate the field-object shape with Zod.
+3. The parser MUST validate the field-object shape against the Rust extraction model.
 4. Semantic validation MUST report missing required fields, unknown fields, type errors, invalid
    dates, status/value conflicts, and configured rule violations.
 5. extraction.json MUST be write-once. A second import into the same run MUST be rejected.
@@ -715,75 +701,43 @@ Extraction-level rules additionally apply:
 Review validation MAY normalize review input before checking it. Rendering validation MUST check the
 normalized business values without weakening the template contract.
 
-## 10. Desktop IPC contract
+## 10. Tauri command contract
 
 ### 10.1 API surface
 
-The preload MUST expose a narrow window.fillforge API with these operation groups:
+The renderer MUST preserve the existing `window.fillforge` method names and DTO shapes through a
+small TypeScript bridge over Tauri's `invoke` API. Rust MUST implement these 23 operations:
 
 | Group     | Operations                                                                                       |
 | --------- | ------------------------------------------------------------------------------------------------ |
-| templates | list, import, load, saveSchema, inspect, duplicate, delete, promptPreview                        |
+| templates | list, import, load, saveSchema, inspect, syncPlaceholders, duplicate, delete, promptPreview      |
 | settings  | load, save                                                                                       |
 | runs      | create, list, load, generatePrompt, importExtraction, saveReview, normalize, render, attachFiles |
 | system    | openPath, showItemInFolder, exportCopy                                                           |
 
-Renderer code MUST NOT call ipcRenderer directly. All IPC channels MUST be validated in the main
-process with Zod before invoking a service.
+TypeScript contracts MUST be generated from Rust domain models and MUST NOT be edited manually. The
+bridge MUST preserve the response envelope `{ ok: true, data }` or `{ ok: false, error }` and existing
+error codes. Rust MUST validate command inputs and MUST return safe error details without exposing
+arbitrary stack traces.
 
-### 10.2 Channels and payloads
-
-Current channels are:
-
-```text
-templates:list
-templates:import
-templates:load
-templates:update-schema
-templates:inspect
-templates:sync-placeholders
-templates:duplicate
-templates:delete
-templates:prompt-preview
-
-settings:load
-settings:save
-
-runs:create
-runs:list
-runs:load
-runs:generate-prompt
-runs:import-extraction
-runs:save-review
-runs:normalize
-runs:render
-runs:attach-files
-
-system:open-path
-system:show-item-in-folder
-system:export-copy
-```
-
-Boundary requirements:
+### 10.2 Command payloads
 
 - Empty operations MUST accept no meaningful payload.
-- ID-bearing operations MUST validate template IDs or ULID run IDs with shared schemas.
-- runs:create MUST accept only the template ID from the renderer; attachment paths MUST NOT be
+- ID-bearing operations MUST validate template IDs or ULID run IDs.
+- `runs:create` MUST accept only the template ID from the renderer; attachment paths MUST NOT be
   supplied by renderer payloads.
-- runs:import-extraction MUST reject empty input and inputs longer than 2,000,000 characters.
-- settings:save MUST validate theme, advanced-field flag, and a trimmed prompt version between 1 and
-  100 characters.
-- IPC responses MUST use either { ok: true, data } or { ok: false, error }.
-- Error DTOs MUST contain code and message and MAY contain safe details. Arbitrary Node/Electron
-  errors and stack traces MUST NOT be sent to the renderer.
+- `runs:import-extraction` MUST reject empty input and inputs longer than 2,000,000 UTF-16 code units.
+- `settings:save` MUST validate theme, language, advanced-field flag, and a trimmed prompt version
+  between 1 and 100 characters.
+- Errors from command input parsing MUST be converted to a stable FillForge error response.
 
 ### 10.3 Native file operations
 
-The main process owns native dialogs for DOCX import, source attachment, and export.
+The Tauri Rust process owns native dialogs for DOCX import, source attachments, and export.
 
 System open, reveal, and export operations MUST:
 
-1. Accept only a path selected from an application result or another trusted main-process flow.
+1. Accept only a path selected from an application result or another trusted native flow.
 2. Resolve the path and verify it is inside the FillForge data directory.
 3. Resolve symlinks and verify the real path remains inside that directory.
 4. Require an existing regular file for open, reveal, and export source operations.
@@ -793,26 +747,16 @@ The renderer MUST NOT be given a general-purpose file read/write API.
 
 ### 10.4 Help menu
 
-The desktop application MUST install a native application menu with a Help submenu. Help MUST
-provide these entries:
-
-| Menu item             | Destination                                                                |
-| --------------------- | -------------------------------------------------------------------------- |
-| User Guide            | https://github.com/lihaozhe013/FillForge/blob/main/docs/USER_GUIDE.md      |
-| AI Agent Prompt       | https://github.com/lihaozhe013/FillForge/blob/main/docs/AI_AGENT_PROMPT.md |
-| Project Specification | https://github.com/lihaozhe013/FillForge/blob/main/SPEC.md                 |
-| FillForge on GitHub   | https://github.com/lihaozhe013/FillForge                                   |
-
-Each entry MUST open its destination with the operating system's external browser through Electron
-shell integration. The Help menu MUST NOT read arbitrary local files or expose a filesystem API to
-the renderer. The URLs are intentionally pinned to the main branch so a packaged application keeps a
-stable documentation entry point.
+The desktop application MUST install a native application menu with a Help submenu linking to the User
+Guide, AI Agent Prompt, specification, and repository. Each entry MUST open its destination with the
+operating system's external browser through the Tauri opener plugin. The Help menu MUST NOT read
+arbitrary local files or expose a filesystem API to the renderer.
 
 ## 11. Security and privacy
 
-- BrowserWindow MUST use contextIsolation: true, nodeIntegration: false, sandbox: true where
-  supported, and webSecurity: true.
-- The preload MUST expose only the documented FillForge API.
+- Tauri's WebView MUST have no unrestricted Node.js, shell, or filesystem access.
+- Tauri capabilities MUST grant only core and opener permissions required by the UI.
+- The TypeScript bridge MUST expose only the documented FillForge API.
 - Path construction MUST validate identifiers and prevent traversal.
 - Template document paths MUST remain inside the template directory, including after symlink
   resolution.
@@ -831,86 +775,61 @@ stable documentation entry point.
 ## 12. CLI contract
 
 The CLI MUST assemble the same services as the desktop application and MUST NOT contain a second
-implementation of domain behavior.
+implementation of domain behavior. It is built as a Rust binary:
 
 ```bash
-pnpm tsx packages/tools/src/index.ts inspect-template <templateId>
-pnpm tsx packages/tools/src/index.ts extract-fields <templateId>
-pnpm tsx packages/tools/src/index.ts validate-fields <templateId> <extraction.json>
-pnpm tsx packages/tools/src/index.ts render-document <runId>
+cargo run -p fillforge-cli -- inspect-template <templateId>
+cargo run -p fillforge-cli -- extract-fields <templateId>
+cargo run -p fillforge-cli -- validate-fields <templateId> <extraction.json>
+cargo run -p fillforge-cli -- render-document <runId>
 ```
 
 Command semantics:
 
-- inspect-template prints discovered placeholders and configuration gaps.
-- extract-fields prints the deterministic prompt and expected JSON structure.
-- validate-fields parses and validates an extraction file without mutating a run; on success, the
-  current CLI also prints normalized values.
-- render-document renders an existing run using the run service and writes output under its run
+- `inspect-template` prints discovered placeholders and configuration gaps.
+- `extract-fields` prints the deterministic prompt and expected JSON structure.
+- `validate-fields` parses and validates an extraction file without mutating a run; on success, the
+  CLI also prints normalized values.
+- `render-document` renders an existing run using the run service and writes output under its run
   directory.
 
-All commands MUST honor FILLFORGE_HOME.
+All commands MUST honor `FILLFORGE_HOME`.
 
-## 13. Testing and release gates
+## 13. Build and release gates
 
-### 13.1 Required test coverage
-
-Tests MUST use temporary or environment-overridden roots and MUST cover:
-
-- valid and invalid config, template, run, extraction, review, and normalized schemas;
-- unsupported schema versions;
-- invalid and traversal-prone identifiers and document paths;
-- placeholder inspection across Word XML run boundaries;
-- automatic placeholder field and binding creation plus sync preservation;
-- deterministic prompt output and expected JSON output;
-- plain JSON, fenced JSON, malformed JSON, missing fields, wrong types, not_found, and ambiguous
-  extraction cases;
-- blank strings, numeric coercion, boolean coercion, and invalid calendar dates;
-- all built-in binding transforms;
-- immutable prompt and extraction artifacts;
-- review persistence, normalized invalidation, and restart reads;
-- versioned outputs and newest-output mirroring;
-- typed IPC payload validation;
-- safe system path operations;
-- an end-to-end DOCX workflow using fixtures.
-
-### 13.2 Quality gates
-
-Before merging a change, run:
+The migration's build gates are:
 
 ```bash
-pnpm test
 pnpm typecheck
-pnpm lint
-pnpm format:check
-pnpm build
+cargo check --workspace
+pnpm build:win:x64
+pnpm build:mac:arm64
 ```
 
-A failure in a domain-critical gate MUST be fixed or explicitly documented before merge.
+The CI workflow MUST build a Windows x64 NSIS installer and a macOS ARM DMG and upload both as
+workflow artifacts. It MUST NOT run automated tests. A push to `publish` MAY update the existing
+`nightly` prerelease and checksums after both platform builds succeed. A manual workflow dispatch
+MUST upload artifacts only and MUST NOT publish or update a release.
+
+The packages use manual download and installation. The workflow MUST NOT configure signing,
+notarization, or an in-app updater.
 
 ## 14. MVP acceptance criteria
 
-The following scenario is the release-level acceptance test:
+Manual acceptance for a migration build MUST confirm:
 
-1. Launch the desktop application with only Node.js 26.x and pnpm installed.
-2. Import the invoice DOCX fixture.
-3. Confirm the application discovers invoice_number, invoice_date, seller_name, and total_amount,
-   including any split-run placeholder in the fixture.
-4. Configure field definitions and bindings, then confirm template.yaml is readable and versioned.
-5. Create a run and attach a source image or PDF; confirm the evidence is copied into input/.
-6. Generate a prompt; confirm the prompt and expected JSON are visible and prompt.md is immutable.
-7. Paste valid JSON, including a fenced response in one test; confirm extraction.json is persisted
-   once and issues are displayed when applicable.
-8. Review at least one field; confirm model_value remains unchanged, final_value is stored in
-   review.json, and normalized.json is invalidated.
-9. Attempt rendering with an invalid required value; confirm rendering is rejected with field
-   issues.
-10. Correct the value and render; confirm result-001.docx and result.docx exist and are identical.
-11. Render again; confirm a new version is retained and result.docx mirrors the newest version.
-12. Restart the application; confirm the template, run, review, and output remain available from
-    ordinary files without a database.
-13. Open Help > User Guide and confirm it opens the public GitHub documentation page.
-14. Run the CLI inspection, validation, and rendering commands against the same isolated root.
+1. Launch the installed desktop app without a Node.js installation.
+2. Open an existing template and run from the pre-migration data directory.
+3. Import `examples/invoice/invoice-template.docx` and confirm its simple placeholders are discovered.
+4. Confirm placeholders in the document body, headers, and footers are inspected.
+5. Create or reopen a run, import extraction JSON, review at least one field, and render a DOCX.
+6. Confirm the model value stays unchanged, the final value is saved in `review.json`, and the output
+   appears as both a numbered file and `result.docx`.
+7. Reopen the rendered DOCX in Word or a compatible viewer and verify the template's formatting.
+8. Run `inspect-template`, `extract-fields`, `validate-fields`, and `render-document` against the
+   same data root using the Rust CLI.
+9. Confirm the Help menu opens the documentation links in the system browser.
+10. Confirm the Windows NSIS and macOS ARM DMG artifacts are present and non-empty.
 
 ## 15. Explicit non-goals and future seams
 
@@ -922,7 +841,7 @@ The following are outside the MVP and MUST NOT be added as incidental infrastruc
 - user accounts, authentication, collaboration, sync, or remote storage;
 - SQL or embedded databases and background job queues;
 - automatic email sending, uploads, or external workflow execution;
-- Rust, Go, Python, Java, .NET, Docker, or LibreOffice runtime requirements.
+- Go, Python, Java, .NET, Docker, or LibreOffice runtime requirements.
 
 The provider-neutral extraction seam MAY be extended through an interface like:
 
@@ -952,18 +871,17 @@ CLI. They MUST define workspace permissions and path exposure before implementat
 
 ## 16. Change control
 
-A change that modifies a persisted shape, security boundary, IPC contract, rendering semantics, or
-MVP acceptance criterion MUST update this document, the affected schemas/tests, and the README where
-applicable.
+A change that modifies a persisted shape, security boundary, command contract, rendering semantics,
+or MVP acceptance criterion MUST update this document, the affected Rust models and generated
+TypeScript contracts, and the README where applicable.
 
 Contributors MUST:
 
 1. Keep normative requirements in this document rather than in ad hoc task notes.
-2. Add or update tests for behavior changes.
-3. Keep package boundaries and canonical paths intact.
-4. Use explicit migrations for supported persisted-shape changes.
-5. Use English for source comments, documentation, generated project files, and commit messages.
-6. Use Conventional Commits for commit messages.
+2. Keep the Rust workspace boundaries and canonical paths intact.
+3. Use explicit migrations for supported persisted-shape changes.
+4. Use English for source comments, documentation, generated project files, and commit messages.
+5. Use Conventional Commits for commit messages.
 
 Decisions requiring explicit product approval include any new persistence root, database, cloud
 backend, authentication, telemetry, direct AI dependency, agent runtime, MCP runtime, sidecar

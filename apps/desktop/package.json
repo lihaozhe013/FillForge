@@ -2,45 +2,31 @@
   "name": "@fillforge/desktop",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "author": "Haozhe Li",
-  "description": "FillForge desktop application (Electron)",
-  "main": "out/main/main.js",
+  "description": "FillForge desktop application (Tauri)",
   "scripts": {
-    "dev": "electron-vite dev",
-    "dev:no-gpu": "FILLFORGE_DISABLE_GPU=1 electron-vite dev",
-    "build": "electron-vite build",
-    "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.electron.json && tsc --noEmit -p tsconfig.web.json",
-    "test": "vitest run --root ../..",
-    "package": "electron-builder --config electron-builder.yml --publish never",
-    "package:win": "electron-builder --config electron-builder.yml --win nsis --publish never",
-    "package:win:x64": "electron-builder --config electron-builder.yml --win nsis --x64 --publish never",
-    "package:mac": "electron-builder --config electron-builder.yml --mac dmg --publish never",
-    "package:mac:arm64": "electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
-    "package:mac:x64": "electron-builder --config electron-builder.yml --mac dmg --x64 --publish never"
+    "dev": "tauri dev",
+    "dev:web": "vite --host 127.0.0.1 --port 1420",
+    "build:web": "vite build",
+    "build": "tauri build",
+    "typecheck": "tsc --noEmit -p tsconfig.web.json",
+    "tauri": "tauri"
   },
   "dependencies": {
-    "@fillforge/core": "workspace:*",
-    "@fillforge/docx": "workspace:*",
-    "@fillforge/extraction": "workspace:*",
-    "@fillforge/runs": "workspace:*",
-    "@fillforge/schema": "workspace:*",
-    "@fillforge/templates": "workspace:*",
+    "@tauri-apps/api": "^2.8.0",
     "i18next": "^26.4.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-i18next": "^17.0.14",
-    "zod": "^4.6.5"
+    "react-i18next": "^17.0.14"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.2",
+    "@tauri-apps/cli": "^2.8.4",
     "@types/node": "^22.20.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
-    "electron": "^44.4.1",
-    "electron-builder": "26.15.3",
-    "electron-vite": "^6.0.0-beta.1",
+    "typescript": "^7.0.2",
     "vite": "^8.3.0"
   }
 }

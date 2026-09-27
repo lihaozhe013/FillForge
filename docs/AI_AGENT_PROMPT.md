@@ -183,7 +183,7 @@ language.
 
 ### DOCX placeholder rules
 
-Placeholders are plain Docxtemplater text markers:
+Placeholders are plain FillForge single-brace text markers:
 
 - One pair of braces, key hugging the braces: `{invoice_number}`, never `{ invoice_number }`,
   `<<invoice_number>>`, `{{invoice_number}}`, or `{发票号码}`.
@@ -212,10 +212,9 @@ Preferred strategy — **in-place substitution** (preserves 100% of the original
 5. Verify the DOCX opens as a valid ZIP and that `word/document.xml` is well-formed XML.
 
 Fallback strategy — **generate from scratch** (only when the source is not a usable DOCX, e.g. the
-user gave you a PDF, image, or description): build a minimal OOXML package with PizZip (or any ZIP
-library) containing `[Content_Types].xml`, `_rels/.rels`, `word/_rels/document.xml.rels`, and
-`word/document.xml` with `<w:p>`/`w:r`/`w:t` paragraphs and `<w:tbl>` tables. The FillForge
-repository file `examples/make-example.ts` is a complete working reference for this exact approach.
+user gave you a PDF, image, or description): build a minimal OOXML package with a ZIP library
+containing `[Content_Types].xml`, `_rels/.rels`, `word/_rels/document.xml.rels`, and
+`word/document.xml` with `<w:p>`/`w:r`/`w:t` paragraphs and `<w:tbl>` tables.
 
 ### Extraction contract (for context and smoke testing)
 
@@ -255,23 +254,23 @@ Execute these steps in order:
 3. **Build `template.docx`** using the in-place strategy (or the fallback) and write it to
    `<home>/.local/fillforge/templates/<TEMPLATE_ID>/template.docx`. Create the directory if needed.
 4. **Write `template.yaml`** beside it, following the reference above exactly.
-5. **Self-verify with the CLI** if a FillForge repository checkout is available (ask the user for
-   its path; run from the repo root, with `pnpm install` already done):
+5. **Self-verify with the CLI** if a FillForge repository checkout is available (run from the repo
+   root with Rust stable installed):
 
    ```bash
-   FILLFORGE_HOME=<home-root-or-omit> pnpm tsx packages/tools/src/index.ts inspect-template <TEMPLATE_ID>
-   FILLFORGE_HOME=<home-root-or-omit> pnpm tsx packages/tools/src/index.ts extract-fields <TEMPLATE_ID>
+   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli -- inspect-template <TEMPLATE_ID>
+   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli -- extract-fields <TEMPLATE_ID>
    ```
 
    `inspect-template` must report every placeholder with **zero unconfigured placeholders and zero
    unreferenced fields**; `extract-fields` must produce a prompt covering all fields. Fix and re-run
    until clean. Omit `FILLFORGE_HOME` when writing to the real OS home.
 
-6. **Smoke-test validation.** Write a sample unwrapped extraction JSON (contract above) with
+6. **Check extraction validation.** Write a sample unwrapped extraction JSON (contract above) with
    plausible values for every field to a scratch file, then run:
 
    ```bash
-   FILLFORGE_HOME=<home-root-or-omit> pnpm tsx packages/tools/src/index.ts validate-fields <TEMPLATE_ID> <sample.json>
+   FILLFORGE_HOME=<home-root-or-omit> cargo run -p fillforge-cli -- validate-fields <TEMPLATE_ID> <sample.json>
    ```
 
    It must report no issues and print normalized values. If any rule rejects a realistic value,

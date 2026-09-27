@@ -1,5 +1,5 @@
-import type { ExtractionIssue } from '@fillforge/extraction';
-import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from '@fillforge/schema';
+import type { ExtractionIssue } from '../lib/generated-types';
+import type { AttachmentMetadata, ExtractionResult, ReviewedRecord } from '../lib/generated-types';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';

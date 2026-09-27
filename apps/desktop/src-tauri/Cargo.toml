@@ -1,0 +1,23 @@
+[package]
+name = "fillforge-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "fillforge_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+chrono.workspace = true
+fillforge-domain = { path = "../../../crates/fillforge-domain" }
+fillforge-docx = { path = "../../../crates/fillforge-docx" }
+indexmap.workspace = true
+rfd = "0.17"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"

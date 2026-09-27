@@ -1,4 +1,4 @@
-import type { RunSummary, TemplateSummary } from '@fillforge/schema';
+import type { RunSummary, TemplateSummary } from '../lib/generated-types';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';

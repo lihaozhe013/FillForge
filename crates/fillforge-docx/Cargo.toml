@@ -1,0 +1,12 @@
+[package]
+name = "fillforge-docx"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fillforge-domain = { path = "../fillforge-domain" }
+docx-template = { git = "https://github.com/xamgore/docx-template", rev = "ec4e82fd8f0d610a4f9524ffa883502cacf81270" }
+quick-xml = "0.37.5"
+serde_json.workspace = true
+zip = { version = "3.0.0", default-features = false, features = ["deflate"] }

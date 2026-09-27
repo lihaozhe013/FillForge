@@ -48,6 +48,10 @@ pnpm install
 pnpm dev
 ```
 
+Development requires Node.js 26 or later, pnpm, and Rust stable. An installed FillForge app uses the
+system WebView and does not require Node.js. On Windows, uninstall the earlier Electron version
+before installing the Tauri version.
+
 FillForge stores canonical data in ordinary files:
 
 ```text
@@ -62,11 +66,11 @@ FillForge stores canonical data in ordinary files:
 The application does not use a database. Imported templates and source evidence are copied into
 FillForge-owned directories; the original files are not modified.
 
-For tests or an isolated portable workspace, set FILLFORGE_HOME. It changes the logical home root
+For an isolated workspace, set FILLFORGE_HOME. It changes the logical home root
 while preserving the .config/fillforge and .local/fillforge layout:
 
 ```bash
-FILLFORGE_HOME=/tmp/fillforge-demo pnpm test
+FILLFORGE_HOME=/tmp/fillforge-demo pnpm dev
 ```
 
 ## 3. Prepare the Word document
@@ -99,7 +103,7 @@ ships in the repository under [examples/invoice](../examples/README.md).
 
 ### 3.2 Placeholder rules
 
-Use plain Docxtemplater-compatible placeholders:
+Use plain single-brace FillForge placeholders:
 
 ```text
 {invoice_number}
@@ -126,8 +130,9 @@ keys are easier to maintain when they are stable ASCII identifiers.
 
 ### 3.3 Formatting placeholders in Word
 
-A placeholder may be bold, italic, colored, or placed in a table cell. The inserted value inherits
-the formatting around the placeholder according to Word and Docxtemplater behavior.
+A placeholder may be bold, italic, colored, or placed in a table cell. The Rust DOCX renderer
+replaces the placeholder text while retaining the surrounding document formatting. It inspects the
+body, headers, and footers, and recognizes placeholders split across Word runs.
 
 For predictable results:
 
@@ -135,7 +140,7 @@ For predictable results:
 2. Apply the desired formatting after the placeholder exists.
 3. Do not insert Word content controls, mail-merge fields, or custom field codes in place of the
    plain placeholder.
-4. Do not depend on loops, conditions, or custom Docxtemplater filters in the MVP.
+4. Do not use loops, conditions, filters, or other unsupported template tags in the MVP.
 5. Put a placeholder in the exact location where the final text should appear.
 6. Use a table when labels and values need aligned columns.
 7. Test long values, multi-line values, and empty optional values in a sample run.
@@ -205,8 +210,8 @@ YAML is indentation-sensitive:
 ### 4.2 Complete invoice example
 
 The following configuration matches the Word example above. The identical pair (this YAML plus a
-fillable DOCX) is checked in under [examples/invoice](../examples/README.md) and covered by the
-integration tests, so you can import it instead of typing it out:
+fillable DOCX) is checked in under [examples/invoice](../examples/README.md), so you can import it
+instead of typing it out:
 
 ```yaml
 schema_version: 1
@@ -784,13 +789,13 @@ than silently rewritten.
 
 ## 10. CLI workflow
 
-The CLI uses the same services as the desktop application:
+The Rust CLI uses the same services as the desktop application:
 
 ```bash
-pnpm tsx packages/tools/src/index.ts inspect-template <templateId>
-pnpm tsx packages/tools/src/index.ts extract-fields <templateId>
-pnpm tsx packages/tools/src/index.ts validate-fields <templateId> <extraction.json>
-pnpm tsx packages/tools/src/index.ts render-document <runId>
+cargo run -p fillforge-cli -- inspect-template <templateId>
+cargo run -p fillforge-cli -- extract-fields <templateId>
+cargo run -p fillforge-cli -- validate-fields <templateId> <extraction.json>
+cargo run -p fillforge-cli -- render-document <runId>
 ```
 
 The extraction JSON supplied to validate-fields is the unwrapped AI response, not the persisted
@@ -799,7 +804,7 @@ extraction.json wrapper.
 Use an isolated root:
 
 ```bash
-FILLFORGE_HOME=/tmp/fillforge-demo pnpm tsx packages/tools/src/index.ts inspect-template invoice
+FILLFORGE_HOME=/tmp/fillforge-demo cargo run -p fillforge-cli -- inspect-template invoice
 ```
 
 Command output:

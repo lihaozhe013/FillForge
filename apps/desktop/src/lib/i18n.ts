@@ -1,4 +1,4 @@
-import { type AppLanguageSetting, resolveLocale } from '@fillforge/schema';
+import type { AppLanguageSetting } from './generated-types';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from '../locales/en.json';
@@ -8,6 +8,11 @@ export const i18nResources = {
   en: { translation: en },
   'zh-CN': { translation: zhCN }
 };
+
+function resolveLocale(language: AppLanguageSetting, systemLocale: string): 'en' | 'zh-CN' {
+  if (language !== 'system') return language;
+  return systemLocale.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
+}
 
 /** Initialize (or re-point) renderer i18n at the persisted language setting. */
 export function applyLanguage(language: AppLanguageSetting): void {

@@ -1,86 +1,43 @@
-import type { ExtractionIssue } from '@fillforge/extraction';
-import type { RenderedArtifact } from '@fillforge/runs';
 import type {
+  AppErrorDto,
+  AppTheme,
   AttachmentMetadata,
+  ExtractionIssue,
   ExtractionResult,
+  GeneratedPrompt,
   PlaceholderReport,
+  RenderedArtifact,
   ResolvedAppConfig,
+  ReviewSaveResult,
   ReviewedRecord,
+  RunDetails,
   RunMetadata,
   RunSummary,
   TemplateSchema,
-  TemplateSummary
-} from '@fillforge/schema';
+  TemplateSummary,
+} from './generated-types';
 
-export interface PromptPreview {
-  prompt: string;
-  expectedJson: string;
-}
-
-export const IPC = {
-  templatesList: 'templates:list',
-  templatesImport: 'templates:import',
-  templatesLoad: 'templates:load',
-  templatesSaveSchema: 'templates:update-schema',
-  templatesInspect: 'templates:inspect',
-  templatesSyncPlaceholders: 'templates:sync-placeholders',
-  templatesDuplicate: 'templates:duplicate',
-  templatesDelete: 'templates:delete',
-  templatesPromptPreview: 'templates:prompt-preview',
-
-  settingsLoad: 'settings:load',
-  settingsSave: 'settings:save',
-
-  runsCreate: 'runs:create',
-  runsList: 'runs:list',
-  runsLoad: 'runs:load',
-  runsGeneratePrompt: 'runs:generate-prompt',
-  runsImportExtraction: 'runs:import-extraction',
-  runsSaveReview: 'runs:save-review',
-  runsNormalize: 'runs:normalize',
-  runsRender: 'runs:render',
-  runsAttachFiles: 'runs:attach-files',
-
-  systemOpenPath: 'system:open-path',
-  systemShowItemInFolder: 'system:show-item-in-folder',
-  systemExportCopy: 'system:export-copy'
-} as const;
-
-export interface RunDetailsDto {
-  metadata: RunMetadata;
-  prompt: string | null;
-  expectedJson: string | null;
-  extraction: ExtractionResult | null;
-  review: ReviewedRecord | null;
-  normalized: Record<string, unknown> | null;
-  outputs: RunOutputDto[];
-}
-
-export interface RunOutputDto {
-  filename: string;
-  path: string;
-}
+export type PromptPreview = Pick<GeneratedPrompt, 'prompt' | 'expectedJson'>;
 
 export interface CreateRunDto {
   templateId: string;
 }
 
 export interface SettingsUpdateDto {
-  theme: ResolvedAppConfig['theme'];
+  theme: AppTheme;
   language: ResolvedAppConfig['language'];
   showAdvancedFields: boolean;
   promptVersion: string;
 }
 
-export interface ImportExtractionResultDto {
+export type ImportExtractionResultDto = {
   result: ExtractionResult;
   issues: ExtractionIssue[];
-}
+};
 
-export interface ReviewSaveResultDto {
-  review: ReviewedRecord;
-  issues: ExtractionIssue[];
-}
+export type ReviewSaveResultDto = ReviewSaveResult;
+export type RunDetailsDto = RunDetails;
+export type RunOutputDto = RunDetails['outputs'][number];
 
 export interface FillForgeApi {
   templates: {
@@ -116,10 +73,6 @@ export interface FillForgeApi {
   };
 }
 
-export interface AppErrorDtoLike {
-  code: string;
-  message: string;
-  details?: unknown;
-}
+export type AppErrorDtoLike = Omit<AppErrorDto, 'details'> & { details?: unknown };
 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: AppErrorDtoLike };

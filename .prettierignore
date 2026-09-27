@@ -13,6 +13,5 @@ apps/desktop/debug-logs
 # Lockfiles are machine-generated
 pnpm-lock.yaml
 
-# Test fixtures are byte-exact inputs (e.g. deliberately-malformed payloads);
-# never let the formatter "repair" them.
-tests/fixtures
+# Generated from Rust domain models
+apps/desktop/src/lib/generated-types.ts
