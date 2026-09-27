@@ -1,8 +1,8 @@
 # FillForge
 
-FillForge is a local-first desktop application for configuring DOCX templates, importing values
-produced by an external AI tool, reviewing those values, and rendering Microsoft Word documents.
-The application does not call model providers or upload source documents.
+FillForge is a local-first desktop application for filling DOCX templates from source documents.
+Choose a template and source files, extract values with a configured AI connection, review the values,
+and create a formatted Word document in one guided run.
 
 The desktop app uses Tauri 2 with a React/Vite interface and a Rust backend. Tauri uses the operating
 system WebView on Windows and macOS; the packaged application does not include Node.js or Chromium.
@@ -15,9 +15,13 @@ product contract and [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for template autho
   Word runs and located in the document body, headers, or footers.
 - Configure fields, extraction instructions, validation, normalization, and placeholder bindings in
   YAML.
-- Generate a deterministic prompt and expected JSON structure for an external AI tool.
+- Extract source documents through a configurable Responses or Chat Completions AI connection, or
+  use the advanced prompt and JSON import workflow with an external AI tool.
 - Import and validate extracted JSON, review or correct the values, and render formatted DOCX files.
-- Keep prompts, extraction results, reviews, and versioned output files in inspectable local storage.
+- Keep source files, prompts, extraction results, reviews, and versioned output files in inspectable
+  local storage. Clearing run history preserves all generated DOCX files.
+- Store AI API keys in the operating system credential store and connection metadata in a versioned
+  configuration file.
 - Use the same Rust business services through the desktop UI or the four CLI commands.
 
 ## Development requirements
@@ -80,6 +84,7 @@ remain unchanged, so Tauri opens existing templates and runs in place without a 
 
 ```text
 <home>/.config/fillforge/config.yaml
+<home>/.config/fillforge/ai-connections.json
 
 <home>/.local/fillforge/
 ├── templates/<template-id>/
@@ -96,9 +101,15 @@ remain unchanged, so Tauri opens existing templates and runs in place without a 
 │       ├── result-001.docx
 │       └── result.docx
 ├── exports/
+│   └── preserved-runs/<run-ulid>/
+│       ├── result-001.docx
+│       └── result.docx
 ├── cache/
 └── logs/
 ```
+
+AI API keys are held in the operating system credential store; they are not written to either
+configuration file.
 
 `FILLFORGE_HOME` changes the home root while preserving this layout. Templates and source evidence are
 copied into application-owned directories; original files are not modified. Prompt and extraction
@@ -135,9 +146,11 @@ rendering.
 
 ## Privacy and scope
 
-Documents, prompts, extraction results, and rendered files stay local by default. FillForge does not
-upload source evidence or call model APIs automatically. Logs must not contain complete documents,
-image or PDF contents, credentials, or API keys.
+Documents, prompts, extraction results, and rendered files stay local until the user chooses
+**Extract with AI**. At that point, FillForge sends only the selected source files and generated
+extraction prompt to the configured AI provider. Logs must not contain complete documents, image or
+PDF contents, credentials, or API keys. Clearing local run history does not remove data retained by
+an external AI provider.
 
 The MVP does not include OCR, embeddings, RAG, cloud storage, accounts, authentication, telemetry,
 analytics, collaboration, sync, agent runtimes, MCP servers, browser automation, automatic uploads,

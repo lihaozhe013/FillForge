@@ -1,8 +1,11 @@
+use crate::ai::AiConnectionStore;
 use crate::logger::AppLogger;
 use crate::menu::install_menu;
 use fillforge_domain::model::{
-    AppErrorDto, AppLanguageSetting, AppTheme, GeneratedPrompt, ImportExtractionResult,
-    ResolvedAppConfig, ReviewSaveResult, TemplateSchema, TemplateSummary,
+    AiConnectionInput, AiModelDiscoveryRequest, AppErrorDto, AppLanguageSetting, AppTheme,
+    ClearRunsResult, CreateDocumentResult, GeneratedPrompt, ImportExtractionResult,
+    ResolvedAppConfig, ReviewSaveResult, RunDeleteFailure, RunDeleteResult, RunMetadata,
+    TemplateSchema, TemplateSummary,
 };
 use fillforge_domain::{AppContext, AppError, AppResult};
 use indexmap::IndexMap;
@@ -10,14 +13,18 @@ use rfd::FileDialog;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tauri::{AppHandle, State};
 use tauri_plugin_opener::OpenerExt;
 
 pub struct DesktopState {
     pub context: AppContext,
     pub logger: AppLogger,
+    pub ai_connections: AiConnectionStore,
+    pub active_runs: Mutex<HashSet<String>>,
 }
 
 #[derive(Serialize)]
@@ -142,6 +149,18 @@ pub struct TemplateSyncInput {
 #[serde(deny_unknown_fields)]
 pub struct CreateRunInput {
     pub template_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartRunInput {
+    pub template_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetDefaultAiInput {
+    pub default_connection_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -414,6 +433,101 @@ pub fn runs_create(
 }
 
 #[tauri::command]
+pub async fn runs_start_with_files(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> Result<IpcResult<Option<RunMetadata>>, ()> {
+    let input = match parse_input::<StartRunInput>(input) {
+        Ok(input) => input,
+        Err(error) => return Ok(respond(&state, "runs", "runs:start-with-files", Err(error))),
+    };
+    if let Err(error) = validate_template_identifier(&input.template_id, "templateId") {
+        return Ok(respond(&state, "runs", "runs:start-with-files", Err(error)));
+    }
+    let is_chinese = state
+        .context
+        .load_settings()
+        .map(|config| config.language == AppLanguageSetting::ZhCn)
+        .unwrap_or(false);
+    let (title, filter_name) = if is_chinese {
+        ("选择来源文件", "来源文件")
+    } else {
+        ("Choose source files", "Source files")
+    };
+    let result = match pick_files(
+        title.to_string(),
+        filter_name.to_string(),
+        &["jpg", "jpeg", "png", "webp", "gif", "pdf", "txt", "md"],
+    )
+    .await
+    {
+        Err(error) => Err(error),
+        Ok(None) => Ok(None),
+        Ok(Some(paths)) if paths.is_empty() => Ok(None),
+        Ok(Some(paths)) => {
+            let mut total = 0u64;
+            let mut failure = None;
+            for path in &paths {
+                match fs::metadata(path) {
+                    Ok(metadata) if metadata.is_file() => {
+                        total = total.saturating_add(metadata.len());
+                        if total > 50 * 1024 * 1024 {
+                            failure = Some(AppError::validation(
+                                "Selected source files exceed the 50 MB combined limit.",
+                                serde_json::json!({"field":"attachments"}),
+                            ));
+                            break;
+                        }
+                    }
+                    _ => {
+                        failure = Some(AppError::validation(
+                            "A selected source is not a regular file.",
+                            serde_json::json!({}),
+                        ));
+                        break;
+                    }
+                }
+            }
+            match failure {
+                Some(error) => Err(error),
+                None => (|| -> AppResult<Option<RunMetadata>> {
+                    let run = state.context.run_service.create_run(&input.template_id)?;
+                    let mut failure = None;
+                    for path in &paths {
+                        let filename = path
+                            .file_name()
+                            .and_then(|name| name.to_str())
+                            .unwrap_or("source-file");
+                        if let Err(error) = state
+                            .context
+                            .run_service
+                            .add_attachment(&run.id, path, filename)
+                        {
+                            failure = Some(error);
+                            break;
+                        }
+                    }
+                    if let Some(error) = failure {
+                        let _ = state
+                            .context
+                            .run_repository
+                            .delete_preserving_outputs(&run.id, &state.context.paths.exports_dir);
+                        Err(error)
+                    } else {
+                        state
+                            .context
+                            .run_service
+                            .get_run(&run.id)
+                            .map(|details| Some(details.metadata))
+                    }
+                })(),
+            }
+        }
+    };
+    Ok(respond(&state, "runs", "runs:start-with-files", result))
+}
+
+#[tauri::command]
 pub fn runs_list(
     state: State<'_, DesktopState>,
 ) -> IpcResult<Vec<fillforge_domain::model::RunSummary>> {
@@ -437,6 +551,204 @@ pub fn runs_load(
     respond(&state, "runs", "runs:load", result)
 }
 
+struct ActiveRunGuard<'a> {
+    active_runs: &'a Mutex<HashSet<String>>,
+    id: String,
+}
+
+impl Drop for ActiveRunGuard<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut active) = self.active_runs.lock() {
+            active.remove(&self.id);
+        }
+    }
+}
+
+fn acquire_run<'a>(state: &'a DesktopState, id: &str) -> AppResult<ActiveRunGuard<'a>> {
+    acquire_active_run(&state.active_runs, id)
+}
+
+fn acquire_active_run<'a>(
+    active_runs: &'a Mutex<HashSet<String>>,
+    id: &str,
+) -> AppResult<ActiveRunGuard<'a>> {
+    let mut active = active_runs
+        .lock()
+        .map_err(|_| AppError::internal("Run operation state is unavailable."))?;
+    if !active.insert(id.to_string()) {
+        return Err(AppError::new(
+            "run_busy",
+            "This document is being processed. Try again when it finishes.",
+        ));
+    }
+    Ok(ActiveRunGuard {
+        active_runs,
+        id: id.to_string(),
+    })
+}
+
+#[tauri::command]
+pub fn runs_delete(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> IpcResult<RunDeleteResult> {
+    let result = parse_input::<IdInput>(input).and_then(|input| {
+        validate_run_identifier(&input.id, "id")?;
+        acquire_run(&state, &input.id)?;
+        let _active_run = acquire_run(&state, &input.id)?;
+        state
+            .context
+            .run_repository
+            .delete_preserving_outputs(&input.id, &state.context.paths.exports_dir)
+    });
+    respond(&state, "runs", "runs:delete", result)
+}
+
+#[tauri::command]
+pub fn runs_clear_all(state: State<'_, DesktopState>) -> IpcResult<ClearRunsResult> {
+    let result = state.context.run_repository.list_ids().and_then(|ids| {
+        let mut summary = ClearRunsResult {
+            deleted_count: 0,
+            preserved_document_count: 0,
+            failures: Vec::new(),
+        };
+        for id in ids {
+            match acquire_run(&state, &id) {
+                Err(error) => summary.failures.push(RunDeleteFailure {
+                    id,
+                    message: error.message,
+                }),
+                Ok(_active_run) => {
+                    let deleted = state
+                        .context
+                        .run_repository
+                        .delete_preserving_outputs(&id, &state.context.paths.exports_dir);
+                    match deleted {
+                        Ok(deleted) => {
+                            summary.deleted_count += 1;
+                            summary.preserved_document_count += deleted.preserved_document_count;
+                        }
+                        Err(error) => summary.failures.push(RunDeleteFailure {
+                            id,
+                            message: error.message,
+                        }),
+                    }
+                }
+            }
+        }
+        Ok(summary)
+    });
+    respond(&state, "runs", "runs:clear-all", result)
+}
+
+#[tauri::command]
+pub async fn runs_extract_with_ai(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> Result<IpcResult<ImportExtractionResult>, ()> {
+    let result = match parse_input::<IdInput>(input) {
+        Ok(input) => match validate_run_identifier(&input.id, "id")
+            .and_then(|_| acquire_run(&state, &input.id))
+        {
+            Err(error) => Err(error),
+            Ok(_active_run) => {
+                async {
+                    let details = state.context.run_service.get_run(&input.id)?;
+                    if details.extraction.is_some() {
+                        return Err(AppError::new(
+                            "artifact_immutable",
+                            "An extraction already exists for this document.",
+                        ));
+                    }
+                    let prompt = state.context.run_service.generate_prompt(&input.id)?;
+                    let raw = state
+                        .ai_connections
+                        .extract_run(&state.context.run_repository, &input.id, &prompt)
+                        .await?;
+                    state.context.run_service.import_extraction(&input.id, &raw)
+                }
+                .await
+            }
+        },
+        Err(error) => Err(error),
+    };
+    Ok(respond(&state, "runs", "runs:extract-with-ai", result))
+}
+
+#[tauri::command]
+pub fn ai_connections_list(
+    state: State<'_, DesktopState>,
+) -> IpcResult<fillforge_domain::model::AiConnectionList> {
+    respond(
+        &state,
+        "ai",
+        "ai-connections:list",
+        state.ai_connections.list(),
+    )
+}
+
+#[tauri::command]
+pub fn ai_connections_save(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> IpcResult<fillforge_domain::model::AiConnectionList> {
+    let result =
+        parse_input::<AiConnectionInput>(input).and_then(|input| state.ai_connections.save(input));
+    respond(&state, "ai", "ai-connections:save", result)
+}
+
+#[tauri::command]
+pub fn ai_connections_delete(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> IpcResult<fillforge_domain::model::AiConnectionList> {
+    let result =
+        parse_input::<IdInput>(input).and_then(|input| state.ai_connections.delete(&input.id));
+    respond(&state, "ai", "ai-connections:delete", result)
+}
+
+#[tauri::command]
+pub fn ai_connections_set_default(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> IpcResult<fillforge_domain::model::AiConnectionList> {
+    let result = parse_input::<SetDefaultAiInput>(input).and_then(|input| {
+        state
+            .ai_connections
+            .set_default(input.default_connection_id)
+    });
+    respond(&state, "ai", "ai-connections:set-default", result)
+}
+
+#[tauri::command]
+pub async fn ai_connections_discover_models(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> Result<IpcResult<fillforge_domain::model::ModelDiscoveryResult>, ()> {
+    let result = match parse_input::<AiModelDiscoveryRequest>(input) {
+        Ok(input) => state.ai_connections.discover_models(input).await,
+        Err(error) => Err(error),
+    };
+    Ok(respond(
+        &state,
+        "ai",
+        "ai-connections:discover-models",
+        result,
+    ))
+}
+
+#[tauri::command]
+pub async fn ai_connections_test(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> Result<IpcResult<()>, ()> {
+    let result = match parse_input::<AiModelDiscoveryRequest>(input) {
+        Ok(input) => state.ai_connections.test_connection(input).await,
+        Err(error) => Err(error),
+    };
+    Ok(respond(&state, "ai", "ai-connections:test", result))
+}
+
 #[tauri::command]
 pub fn runs_generate_prompt(
     state: State<'_, DesktopState>,
@@ -444,6 +756,7 @@ pub fn runs_generate_prompt(
 ) -> IpcResult<String> {
     let result = parse_input::<IdInput>(input).and_then(|input| {
         validate_run_identifier(&input.id, "id")?;
+        let _active_run = acquire_run(&state, &input.id)?;
         state.context.run_service.generate_prompt(&input.id)
     });
     respond(&state, "runs", "runs:generate-prompt", result)
@@ -468,6 +781,7 @@ pub fn runs_import_extraction(
                 serde_json::json!([{"path":["raw"],"message":"Must contain at most 2000000 characters."}]),
             ));
         }
+        let _active_run = acquire_run(&state, &input.id)?;
         state
             .context
             .run_service
@@ -483,6 +797,7 @@ pub fn runs_save_review(
 ) -> IpcResult<ReviewSaveResult> {
     let result = parse_input::<ReviewInput>(input).and_then(|input| {
         validate_run_identifier(&input.id, "id")?;
+        let _active_run = acquire_run(&state, &input.id)?;
         state
             .context
             .run_service
@@ -492,12 +807,42 @@ pub fn runs_save_review(
 }
 
 #[tauri::command]
+pub fn runs_create_document(
+    state: State<'_, DesktopState>,
+    input: Option<Value>,
+) -> IpcResult<CreateDocumentResult> {
+    let result = parse_input::<ReviewInput>(input).and_then(|input| {
+        validate_run_identifier(&input.id, "id")?;
+        let _active_run = acquire_run(&state, &input.id)?;
+        let saved = state
+            .context
+            .run_service
+            .save_review(&input.id, &input.final_values)?;
+        if !saved.issues.is_empty() {
+            return Ok(CreateDocumentResult {
+                review: saved.review,
+                issues: saved.issues,
+                output: None,
+            });
+        }
+        let output = state.context.run_service.render_run(&input.id)?;
+        Ok(CreateDocumentResult {
+            review: saved.review,
+            issues: saved.issues,
+            output: Some(output),
+        })
+    });
+    respond(&state, "runs", "runs:create-document", result)
+}
+
+#[tauri::command]
 pub fn runs_normalize(
     state: State<'_, DesktopState>,
     input: Option<Value>,
 ) -> IpcResult<IndexMap<String, Value>> {
     let result = parse_input::<IdInput>(input).and_then(|input| {
         validate_run_identifier(&input.id, "id")?;
+        let _active_run = acquire_run(&state, &input.id)?;
         state.context.run_service.build_normalized(&input.id)
     });
     respond(&state, "runs", "runs:normalize", result)
@@ -510,6 +855,7 @@ pub fn runs_render(
 ) -> IpcResult<fillforge_domain::model::RenderedArtifact> {
     let result = parse_input::<IdInput>(input).and_then(|input| {
         validate_run_identifier(&input.id, "id")?;
+        let _active_run = acquire_run(&state, &input.id)?;
         state.context.run_service.render_run(&input.id)
     });
     respond(&state, "runs", "runs:render", result)
@@ -525,6 +871,10 @@ pub async fn runs_attach_files(
             Ok(()) => input,
             Err(error) => return Ok(respond(&state, "runs", "runs:attach-files", Err(error))),
         },
+        Err(error) => return Ok(respond(&state, "runs", "runs:attach-files", Err(error))),
+    };
+    let _active_run = match acquire_run(&state, &input.id) {
+        Ok(active) => active,
         Err(error) => return Ok(respond(&state, "runs", "runs:attach-files", Err(error))),
     };
     let is_chinese = state
@@ -694,4 +1044,48 @@ pub async fn system_export_copy(
         }
     };
     Ok(respond(&state, "system", "system:export-copy", result))
+}
+
+#[tauri::command]
+pub fn system_open_saved_documents(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> IpcResult<()> {
+    let directory = state.context.paths.exports_dir.join("preserved-runs");
+    let result = fs::create_dir_all(&directory)
+        .map_err(AppError::from)
+        .and_then(|_| {
+            app.opener()
+                .open_path(directory.to_string_lossy().to_string(), None::<&str>)
+                .map_err(|_| {
+                    AppError::new(
+                        "open_saved_documents_failed",
+                        "The saved documents folder could not be opened.",
+                    )
+                })
+        });
+    respond(&state, "system", "system:open-saved-documents", result)
+}
+
+#[cfg(test)]
+mod active_run_tests {
+    use super::acquire_active_run;
+    use std::collections::HashSet;
+    use std::sync::Mutex;
+
+    #[test]
+    fn processing_run_cannot_be_acquired_twice_and_releases_on_drop() {
+        let active_runs = Mutex::new(HashSet::new());
+        let active = acquire_active_run(&active_runs, "01K5A000000000000000000000")
+            .expect("acquire active run");
+
+        let error = match acquire_active_run(&active_runs, "01K5A000000000000000000000") {
+            Err(error) => error,
+            Ok(_guard) => panic!("duplicate operation should be rejected"),
+        };
+        assert_eq!(error.code, "run_busy");
+
+        drop(active);
+        assert!(acquire_active_run(&active_runs, "01K5A000000000000000000000").is_ok());
+    }
 }

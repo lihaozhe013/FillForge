@@ -38,6 +38,30 @@ export type ExtractionConfig = { prompt_version?: string, };
 
 export type ResolvedAppConfig = { theme: AppTheme, language: AppLanguageSetting, showAdvancedFields: boolean, promptVersion: string, };
 
+export type AiProtocol = "responses" | "chat-completions";
+
+export type AiModelProfile = { id: string, model: string, label?: string, };
+
+export type AiConnectionInput = { id?: string, name: string, protocol: AiProtocol, baseUrl: string, models: Array<AiModelProfile>, defaultModel: string, apiKey?: string, removeApiKey: boolean, };
+
+export type AiConnectionSummary = { id: string, name: string, protocol: AiProtocol, baseUrl: string, models: Array<AiModelProfile>, defaultModel: string, hasApiKey: boolean, };
+
+export type AiConnectionList = { connections: Array<AiConnectionSummary>, defaultConnectionId?: string, };
+
+export type AiModelDiscoveryRequest = { id?: string, protocol?: AiProtocol, baseUrl?: string, model?: string, apiKey?: string, useSavedApiKey: boolean, };
+
+export type ModelDiscoverySource = "catalog" | "validatedModel";
+
+export type ModelDiscoveryResult = { models: Array<string>, truncated: boolean, source: ModelDiscoverySource, };
+
+export type RunDeleteResult = { preservedDocumentCount: number, preservedDirectory?: string, };
+
+export type CreateDocumentResult = { review: ReviewedRecord, issues: Array<ExtractionIssue>, output?: RenderedArtifact, };
+
+export type RunDeleteFailure = { id: string, message: string, };
+
+export type ClearRunsResult = { deletedCount: number, preservedDocumentCount: number, failures: Array<RunDeleteFailure>, };
+
 export type ExtractionStatus = "found" | "not_found" | "ambiguous";
 
 export type ExtractedField = { value: JsonValue, status: ExtractionStatus, evidence: string | null, };

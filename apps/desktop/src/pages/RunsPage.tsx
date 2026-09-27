@@ -14,7 +14,7 @@ export function RunsPage({ navigate }: { navigate: Navigate }) {
       <header className="page-header">
         <h1>{t('runs.title')}</h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: 'newRun' })}>{t('common.newRun')}</button>
+          <button onClick={() => navigate({ page: 'run' })}>{t('common.newRun')}</button>
         </div>
       </header>
 

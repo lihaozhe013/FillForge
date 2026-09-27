@@ -10,23 +10,21 @@ For the normative architecture, persistence, security, and acceptance requiremen
 
 ## 1. What FillForge does
 
-FillForge separates document extraction from document rendering:
+FillForge guides one document from source files to a finished Word file:
 
 ```text
 Word template + field configuration
                 ↓
-        deterministic prompt
+        selected source files
                 ↓
- external AI tool returns JSON
+   extract and review values
                 ↓
-     review and validation in FillForge
-                ↓
-       deterministic DOCX output
+       generated DOCX output
 ```
 
-FillForge does not call an AI provider in the MVP. You copy the generated prompt to ChatGPT, Claude,
-Gemini, or another multimodal tool, attach the source material there, and paste the JSON response
-back into FillForge.
+FillForge can call a configured AI connection after you choose **Extract with AI**. Only the
+selected source files and extraction prompt are sent to that provider. You can also use the Advanced
+prompt and JSON tools to complete extraction with an external AI tool yourself.
 
 A FillForge template has three separate concepts:
 
@@ -56,6 +54,8 @@ FillForge stores canonical data in ordinary files:
 
 ```text
 <home>/.config/fillforge/config.yaml
+<home>/.config/fillforge/ai-connections.json
+Operating system credential store (AI API keys)
 <home>/.local/fillforge/templates/
 <home>/.local/fillforge/runs/
 <home>/.local/fillforge/exports/
@@ -64,7 +64,9 @@ FillForge stores canonical data in ordinary files:
 ```
 
 The application does not use a database. Imported templates and source evidence are copied into
-FillForge-owned directories; the original files are not modified.
+FillForge-owned directories; the original files are not modified. Connection metadata is stored in a
+versioned JSON file. API keys are stored in the operating system credential store and are never
+written to that JSON file. FillForge reports an error if secure key storage is unavailable.
 
 For an isolated workspace, set FILLFORGE_HOME. It changes the logical home root
 while preserving the .config/fillforge and .local/fillforge layout:
@@ -545,33 +547,54 @@ If the template has no configured fields, prompt generation is rejected. Add fie
 
 ## 6. Run the extraction workflow
 
-### 6.1 Create a run
+### 6.1 Start and complete a run
 
-1. Open Runs or choose New Run from a template.
-2. Select the configured template.
-3. Create the run.
-4. Attach source images, PDFs, text files, or Markdown files if you want evidence copied into the
-   run directory.
+1. Open **Run** and choose a document template.
+2. Choose one or more source images, PDFs, text files, or Markdown files. Canceling the file picker
+   does not create a run.
+3. Choose **Extract with AI**. FillForge sends the selected source files and generated extraction
+   prompt to the default AI connection. The combined source files may not exceed 50 MB.
+4. Review the labeled values, correct any mistakes, and expand **View AI result and evidence** when
+   you want to see the source details.
+5. Choose **Create document**. FillForge saves the review, validates and normalizes the values, and
+   renders the DOCX. Correct any inline validation errors and try again if required fields are
+   missing or invalid.
+6. Choose **Open document** or **Save a copy**. Choose **Start another run** to clear the page; the
+   finished run remains available under the small **History** button.
 
-Attached files are copied into input/. FillForge never modifies the original source file.
+FillForge supports PDF, common image formats, UTF-8 text, and Markdown inputs. Some AI models or
+compatible endpoints may reject specific file types. FillForge reports the provider error so you can
+choose another model or use the Advanced tools.
 
-### 6.2 Generate the prompt
+### 6.2 Configure an AI connection
 
-Choose Generate prompt. FillForge creates a prompt that contains:
+Open **Settings → AI connections** to add a named connection. Choose the Responses or Chat
+Completions protocol, enter an HTTPS endpoint (HTTP is allowed for loopback endpoints on this
+computer), then choose **Discover models**. Search the results and add the models you want to keep;
+you can also enter a model ID yourself. Select a default model and save the connection. You can
+discover or test an unsaved connection before saving it. Choose a default AI connection at the top
+of the settings page. The Run page uses it and does not ask you to select a model for each document.
 
-- the extractor role;
-- instructions not to guess;
+If a Responses endpoint cannot list models, discovery can verify the model ID you entered by
+sending a small request with no files and `store: false`. **Test connection** sends a small request
+with no files for either protocol. These requests go to the endpoint shown in the connection
+settings.
+
+The API key is stored in the operating system credential store. The key field only indicates whether
+a key has been saved; FillForge never returns the saved key to the UI. If the operating system
+cannot securely store credentials, the connection cannot be saved with that key.
+
+### 6.3 Use the Advanced prompt and JSON tools
+
+Expand **Advanced tools** on the Run page to generate or copy the prompt and expected JSON, or import
+a prepared extraction result. The prompt contains:
+
+- the extractor role and instructions not to guess;
 - each field key, meaning, type, and required state;
 - field-specific extraction rules;
-- the expected JSON structure;
-- the allowed statuses.
+- the expected JSON structure and allowed statuses.
 
-Choose Copy prompt and optionally Copy expected JSON.
-
-The prompt is generated once for a run. Later changes to the application prompt-version setting
-affect new runs, not an existing run.
-
-### 6.3 Use an external AI tool
+To complete extraction with another AI service:
 
 Open the multimodal AI tool of your choice:
 
@@ -721,11 +744,9 @@ rendering; an optional blank can render as an empty placeholder.
 Saving a review invalidates normalized.json. This prevents a previous normalized value from being
 used after a correction.
 
-## 8. Normalize and render the DOCX
+## 8. Create the DOCX
 
-Choose Normalize to inspect the normalized business record, or choose Normalize + Render DOCX.
-
-Before rendering, FillForge:
+Choose **Create document** on the Run page. FillForge performs these steps together:
 
 1. Loads the current extraction.
 2. Applies the final reviewed values where available.
@@ -735,8 +756,9 @@ Before rendering, FillForge:
 6. Renders the copied DOCX.
 7. Saves a versioned output.
 
-Rendering is blocked when a required or invalid value remains. Fix the review value or update the
-template configuration, then save the review and render again.
+Rendering is blocked when a required or invalid value remains. Fix the inline value or update the
+template configuration, then choose Create document again. After rendering, choose Open document,
+Save a copy, or Start another run.
 
 Every render retains its own version:
 
@@ -748,12 +770,24 @@ runs/<run-ulid>/output/
 ```
 
 result.docx always mirrors the newest version. Previous versioned files remain available for
-comparison and audit.
+comparison and audit until the run is deleted.
 
-Use Open to open a generated document, Show in folder to reveal it, or Export copy to save a copy
-through the native file dialog.
+## 9. Manage run history
 
-## 9. Inspect the stored run
+Open run history with the small **History** button in the Run page. Reopen a run, delete one run, or
+clear all run history from the drawer. Deleting a run copies every generated numbered DOCX and the
+latest result.docx into:
+
+```text
+<home>/.local/fillforge/exports/preserved-runs/<run-ulid>/
+```
+
+If preserving any DOCX fails, FillForge leaves that run intact. If clearing all history encounters
+failures, failed runs stay in history and the drawer offers **Open saved documents**. Files already
+exported to other locations are not changed. Clearing run history removes local run data only and
+does not remove data retained by an external AI provider.
+
+## 10. Inspect the stored run
 
 A completed run has this shape:
 
@@ -787,7 +821,7 @@ Artifact behavior:
 All YAML and JSON domain files are schema-versioned. Unsupported newer versions are rejected rather
 than silently rewritten.
 
-## 10. CLI workflow
+## 11. CLI workflow
 
 The Rust CLI uses the same services as the desktop application:
 
@@ -814,7 +848,7 @@ Command output:
 - validate-fields reports semantic issues and prints normalized values on success.
 - render-document renders the run under its output directory.
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 ### The placeholder is not detected
 
@@ -928,7 +962,7 @@ Debug builds write logs to debug-logs/ in the project working directory. Package
 under the FillForge data log directory. debug.log contains a summary of warnings and errors;
 debug-feature.log contains feature-specific details. Logs rotate at approximately 2 MB.
 
-## 12. Practical template checklist
+## 13. Practical template checklist
 
 Before sharing or using a template, confirm:
 
@@ -946,7 +980,7 @@ Before sharing or using a template, confirm:
 - [ ] The generated DOCX has the expected formatting.
 - [ ] The template.yaml file is backed up or version-controlled.
 
-## 13. Related documentation
+## 14. Related documentation
 
 - [Project specification](../SPEC.md)
 - [Repository README](../README.md)

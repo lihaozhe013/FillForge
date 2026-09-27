@@ -1,3 +1,4 @@
+mod ai;
 mod commands;
 mod logger;
 mod menu;
@@ -42,7 +43,13 @@ pub fn run() {
     std::panic::set_hook(Box::new(move |info| {
         panic_logger.event("error", &format!("Unhandled panic: {info}"));
     }));
-    let state = DesktopState { context, logger };
+    let ai_connections = ai::AiConnectionStore::new(&context.paths.config_dir);
+    let state = DesktopState {
+        context,
+        logger,
+        ai_connections,
+        active_runs: std::sync::Mutex::new(std::collections::HashSet::new()),
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -65,17 +72,29 @@ pub fn run() {
             commands::settings_load,
             commands::settings_save,
             commands::runs_create,
+            commands::runs_start_with_files,
             commands::runs_list,
             commands::runs_load,
+            commands::runs_delete,
+            commands::runs_clear_all,
             commands::runs_generate_prompt,
+            commands::runs_extract_with_ai,
             commands::runs_import_extraction,
             commands::runs_save_review,
+            commands::runs_create_document,
             commands::runs_normalize,
             commands::runs_render,
             commands::runs_attach_files,
+            commands::ai_connections_list,
+            commands::ai_connections_save,
+            commands::ai_connections_delete,
+            commands::ai_connections_set_default,
+            commands::ai_connections_discover_models,
+            commands::ai_connections_test,
             commands::system_open_path,
             commands::system_show_item_in_folder,
             commands::system_export_copy,
+            commands::system_open_saved_documents,
         ])
         .run(tauri::generate_context!())
         .expect("FillForge desktop runtime failed");

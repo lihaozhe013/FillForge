@@ -33,14 +33,24 @@ const api: FillForgeApi = {
     load: (id) => call('templates_load', { id }),
     saveSchema: (id, schema) => call('templates_save_schema', { id, schema }),
     inspect: (id) => call('templates_inspect', { id }),
-    syncPlaceholders: (id, schema) => call('templates_sync_placeholders', schema === undefined ? { id } : { id, schema }),
+    syncPlaceholders: (id, schema) =>
+      call('templates_sync_placeholders', schema === undefined ? { id } : { id, schema }),
     duplicate: (id) => call('templates_duplicate', { id }),
     delete: (id) => call('templates_delete', { id }),
-    promptPreview: (id) => call('templates_prompt_preview', { id }),
+    promptPreview: (id) => call('templates_prompt_preview', { id })
   },
   settings: {
     load: () => call('settings_load'),
-    save: (input) => call('settings_save', input),
+    save: (input) => call('settings_save', input)
+  },
+  aiConnections: {
+    list: () => call('ai_connections_list'),
+    save: (input) => call('ai_connections_save', input),
+    delete: (id) => call('ai_connections_delete', { id }),
+    setDefault: (defaultConnectionId) =>
+      call('ai_connections_set_default', { defaultConnectionId }),
+    discoverModels: (input) => call('ai_connections_discover_models', input),
+    test: (input) => call('ai_connections_test', input)
   },
   runs: {
     create: (input) => call('runs_create', input),
@@ -52,12 +62,18 @@ const api: FillForgeApi = {
     normalize: (id) => call('runs_normalize', { id }),
     render: (id) => call('runs_render', { id }),
     attachFiles: (id) => call('runs_attach_files', { id }),
+    startWithFiles: (input) => call('runs_start_with_files', input),
+    extractWithAi: (id) => call('runs_extract_with_ai', { id }),
+    createDocument: (id, finalValues) => call('runs_create_document', { id, finalValues }),
+    delete: (id) => call('runs_delete', { id }),
+    clearAll: () => call('runs_clear_all')
   },
   system: {
     openPath: (path) => call('system_open_path', { path }),
     showItemInFolder: (path) => call('system_show_item_in_folder', { path }),
     exportCopy: (path) => call('system_export_copy', { path }),
-  },
+    openSavedDocuments: () => call('system_open_saved_documents')
+  }
 };
 
 export function installApi(): void {

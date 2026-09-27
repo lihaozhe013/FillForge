@@ -4,17 +4,14 @@
 | -------- | ------------------------------------------------------------ |
 | Status   | Normative                                                    |
 | Version  | 1.0                                                          |
-| Scope    | MVP baseline                                                 |
+| Scope    | Guided document creation MVP                                 |
 | Audience | Maintainers, contributors, reviewers, and automation authors |
 
-FillForge is a local-first desktop application for configuring DOCX templates, collecting structured
-values from external AI-assisted extraction, reviewing those values, and rendering deterministic
-Microsoft Word documents.
-
-The MVP deliberately uses a manual model handoff: the application generates a prompt, the user runs
-that prompt with any suitable external AI tool, and the user imports the returned JSON. This
-document defines the product contract, technical boundaries, persisted formats, security rules, and
-acceptance criteria for that workflow.
+FillForge is a local-first desktop application for configuring DOCX templates, extracting structured
+values from selected source files through a user-configured AI connection, reviewing those values,
+and rendering deterministic Microsoft Word documents. An Advanced prompt and JSON import workflow
+remains available for manual model handoff. This document defines the product contract, technical
+boundaries, persisted formats, security rules, and acceptance criteria for these workflows.
 
 ## 1. Normative language
 
@@ -32,20 +29,22 @@ consistent with this document. The Rust and TypeScript source is the executable 
 
 ### 2.1 MVP objective
 
-The MVP MUST support this complete local workflow:
+The MVP MUST support this guided document workflow:
 
 1. Import a DOCX template.
 2. Discover its placeholders, including placeholders split across Word XML runs.
 3. Configure business fields, extraction instructions, normalization, validation, and bindings.
 4. Persist the template configuration as human-readable YAML.
-5. Create a run and copy optional source evidence into the run.
-6. Generate and persist a deterministic extraction prompt.
-7. Import raw JSON returned by an external AI tool, including an obvious Markdown JSON fence.
-8. Preserve the original extraction result.
-9. Review, correct, reject, or fill values manually.
-10. Normalize and validate the reviewed business record.
-11. Resolve template bindings and render a DOCX deterministically.
-12. Retain the run and all generated output as inspectable filesystem artifacts.
+5. Select a template and source files; cancellation MUST NOT create a run.
+6. Create the run only after sources are selected and persist a deterministic extraction prompt.
+7. On explicit user action, send only the selected source files and extraction prompt to the default
+   AI connection, then parse its response through the existing extraction validation.
+8. Allow Advanced prompt generation and raw JSON import, including an obvious Markdown JSON fence.
+9. Preserve the original extraction result.
+10. Review, correct, reject, or fill values manually.
+11. Save review, normalize and validate the business record, and create a DOCX in one guided action.
+12. Retain the run and generated output as inspectable filesystem artifacts until the user clears
+    local history; deletion MUST preserve every generated DOCX.
 13. Reopen templates and runs after restarting the application.
 
 ### 2.2 MVP requirement matrix
@@ -63,7 +62,10 @@ The MVP MUST support this complete local workflow:
 | FF-MVP-09 | Application settings for theme, editor options, and prompt version                            | Implemented |
 | FF-MVP-10 | CLI access to inspection, prompt generation, validation, and rendering                        | Implemented |
 | FF-MVP-11 | Native Help menu with links to the User Guide, AI Agent Prompt, specification, and repository | Implemented |
-| FF-MVP-12 | Direct model calls, agent runtime, MCP server, cloud sync, and authentication                 | Deferred    |
+| FF-MVP-12 | Guided one-time Run page with Advanced prompt and JSON tools                                 | Implemented |
+| FF-MVP-13 | Responses and Chat Completions connections with system credential storage                   | Implemented |
+| FF-MVP-14 | History drawer, per-run deletion, and clear-all with DOCX preservation                        | Implemented |
+| FF-MVP-15 | Agent runtime, MCP server, cloud sync, accounts, and authentication                           | Deferred    |
 
 A feature is not considered part of the MVP merely because an interface or future seam exists.
 
@@ -227,10 +229,12 @@ The path module in `crates/fillforge-domain/src/paths.rs` MUST be the single sou
 
 ```text
 <home>/.config/fillforge/config.yaml
+<home>/.config/fillforge/ai-connections.json
 
 <home>/.local/fillforge/templates/
 <home>/.local/fillforge/runs/
 <home>/.local/fillforge/exports/
+<home>/.local/fillforge/exports/preserved-runs/<run-ulid>/
 <home>/.local/fillforge/cache/
 <home>/.local/fillforge/logs/
 ```
@@ -247,7 +251,8 @@ FillForge data directories.
 
 ```text
 <home>/.config/fillforge/
-└── config.yaml
+├── config.yaml
+└── ai-connections.json             versioned metadata only; no API keys
 
 <home>/.local/fillforge/
 ├── templates/
@@ -269,6 +274,8 @@ FillForge data directories.
 │           ├── result-002.docx
 │           └── result.docx             newest output mirror
 ├── exports/
+│   └── preserved-runs/
+│       └── <run-ulid>/              preserved DOCX outputs
 ├── cache/
 └── logs/
 ```
@@ -295,6 +302,7 @@ versions are:
 - extraction.json wrapper: 1
 - review.json: 1
 - normalized.json: 1
+- ai-connections.json: 1
 
 prompt.md is a human-readable artifact rather than a YAML/JSON domain file. Its prompt version is
 recorded in metadata.json and its expected JSON block is stored with the prompt.
@@ -443,7 +451,14 @@ Supported values:
 Missing optional sections resolve to the defaults above. A missing config file MUST load defaults;
 first launch MUST NOT require an empty configuration file to exist.
 
-Secrets MUST NOT be written to config.yaml by the MVP.
+Secrets MUST NOT be written to config.yaml or ai-connections.json. AI API keys MUST be stored in the
+operating system credential store by the Rust backend. The UI MUST receive only whether a key is
+saved, never the key itself. If secure credential storage is unavailable, saving a key MUST fail;
+plaintext fallback storage is prohibited.
+
+AI connection metadata MUST be stored in ai-connections.json with schema_version 1. The file MUST
+contain named connections, protocol, validated endpoint URL, available models, each connection's
+default model, and the application default connection ID.
 
 ### 7.5 Run metadata
 
@@ -666,13 +681,36 @@ placeholder unresolved for validation to report before rendering.
 ### 8.6 Run history
 
 - Run directories MUST be independently inspectable.
-- Run listing MUST be newest-first by created_at.
+- Run listing MUST be newest-first by created_at. The main Run page MUST expose history through a
+  small labeled button rather than a separate prominent run-history page.
 - An unreadable run MUST NOT be modified or silently repaired during listing.
 - The application MUST be able to reopen a valid run and load its metadata, prompt, expected JSON,
   extraction, review, normalized record, and generated outputs. The UI MUST display the user-facing
   run stages and generated outputs; normalized.json remains an inspectable service artifact.
 - Source evidence MUST be copied into input/ and MUST NOT be modified in place.
 - Attachment filename collisions MUST be resolved with a deterministic suffix such as -2, -3.
+- The Run page MUST guide users through template selection, source selection, extraction, editable
+  value review, and document creation. Run IDs, local paths, JSON, prompt versions, and normalization
+  controls MUST remain out of the main flow. Prompt and JSON import tools MUST be in a collapsed
+  Advanced section.
+- A run MUST be created only after at least one source file is selected. Canceling the native picker
+  MUST leave no run.
+- Source inputs MUST support images, PDFs, UTF-8 text, and Markdown with a 50 MiB combined file-size
+  limit. Extraction MUST NOT start until the user chooses Extract with AI. At that point, only the
+  selected source files and generated extraction prompt may be sent to the configured provider.
+- AI responses MUST be parsed through the existing extraction validation. Provider failures,
+  timeouts, and malformed output MUST leave the run available for retry or Advanced import.
+- Create document MUST save the current review, rebuild normalized values, apply business validation,
+  and render the DOCX as one guided action.
+- Before deleting a run or clearing all history, the application MUST preserve every regular
+  result-XXX.docx and result.docx under exports/preserved-runs/<run-ulid>/. Existing identical
+  preserved copies MAY be reused; a name collision with different content MUST fail safely.
+- A run MUST remain intact when any output cannot be preserved. Clear all MUST report per-run
+  failures and offer to open the saved documents folder. Successful deletion MUST remove that run's
+  metadata, inputs, prompt, extraction, review, normalized data, and output directory. Copies
+  exported elsewhere MUST remain untouched.
+- Clear history removes local run data only. It MUST NOT claim to delete data retained by an
+  external AI provider.
 
 ## 9. Validation rules
 
@@ -705,15 +743,18 @@ normalized business values without weakening the template contract.
 
 ### 10.1 API surface
 
-The renderer MUST preserve the existing `window.fillforge` method names and DTO shapes through a
-small TypeScript bridge over Tauri's `invoke` API. Rust MUST implement these 23 operations:
+The renderer MUST preserve existing `window.fillforge` method names and DTO shapes through a
+small TypeScript bridge over Tauri's `invoke` API. Rust MUST implement these 35 operations while
+retaining existing run commands for compatibility:
 
-| Group     | Operations                                                                                       |
-| --------- | ------------------------------------------------------------------------------------------------ |
-| templates | list, import, load, saveSchema, inspect, syncPlaceholders, duplicate, delete, promptPreview      |
-| settings  | load, save                                                                                       |
-| runs      | create, list, load, generatePrompt, importExtraction, saveReview, normalize, render, attachFiles |
-| system    | openPath, showItemInFolder, exportCopy                                                           |
+| Group          | Operations                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| templates      | list, import, load, saveSchema, inspect, syncPlaceholders, duplicate, delete, promptPreview    |
+| settings       | load, save                                                                                     |
+| aiConnections | list, save, delete, setDefault, discoverModels, test                                             |
+| runs           | create, startWithFiles, list, load, delete, clearAll, generatePrompt, extractWithAi,            |
+|                | importExtraction, saveReview, createDocument, normalize, render, attachFiles                    |
+| system         | openPath, showItemInFolder, exportCopy, openSavedDocuments                                     |
 
 TypeScript contracts MUST be generated from Rust domain models and MUST NOT be edited manually. The
 bridge MUST preserve the response envelope `{ ok: true, data }` or `{ ok: false, error }` and existing
@@ -726,6 +767,21 @@ arbitrary stack traces.
 - ID-bearing operations MUST validate template IDs or ULID run IDs.
 - `runs:create` MUST accept only the template ID from the renderer; attachment paths MUST NOT be
   supplied by renderer payloads.
+- `runs:start-with-files` MUST accept only a template ID and MUST obtain files from a native picker.
+  Cancellation or an empty selection MUST NOT create a run. The backend MUST enforce the combined
+  50 MiB input limit before persisting the run.
+- `runs:extract-with-ai` MUST use the application's default AI connection and a prompt generated by
+  the existing extraction service. It MUST send only the run's selected attachments and that prompt.
+- `runs:create-document` MUST save the supplied review, validate it, normalize values, and render
+  the DOCX as one guarded operation. Validation issues MUST be returned without rendering.
+- `runs:delete` and `runs:clear-all` MUST preserve DOCX outputs before removing run data. A run
+  currently being processed MUST remain intact and be reported as a failure by clear-all.
+- `ai-connections:save` MUST accept connection metadata and an optional API key, store the key only
+  through the operating system credential store, and return no key material.
+- `ai-connections:discover-models` and `ai-connections:test` MUST support both saved connections
+  and unsaved drafts. Draft endpoint, protocol, model, and key values MUST remain transient. Model
+  discovery MUST return no more than 4,096 unique model IDs and identify whether it returned a
+  catalog or verified a single configured model.
 - `runs:import-extraction` MUST reject empty input and inputs longer than 2,000,000 UTF-16 code units.
 - `settings:save` MUST validate theme, language, advanced-field flag, and a trimmed prompt version
   between 1 and 100 characters.
@@ -740,7 +796,8 @@ System open, reveal, and export operations MUST:
 1. Accept only a path selected from an application result or another trusted native flow.
 2. Resolve the path and verify it is inside the FillForge data directory.
 3. Resolve symlinks and verify the real path remains inside that directory.
-4. Require an existing regular file for open, reveal, and export source operations.
+4. Require an existing regular file for open, reveal, and export source operations. The dedicated
+   openSavedDocuments operation MAY open the preserved-runs directory itself.
 5. Permit export to a user-selected destination from the native save dialog.
 
 The renderer MUST NOT be given a general-purpose file read/write API.
@@ -763,14 +820,27 @@ arbitrary local files or expose a filesystem API to the renderer.
 - Data file paths used by system operations MUST remain inside the data directory, including after
   symlink resolution.
 - Imported templates and attachments MUST be copied; the originals MUST not be modified.
-- The MVP MUST NOT upload documents, images, PDFs, prompts, or extracted values automatically.
+- Source evidence and prompts MUST NOT be transmitted automatically. They MAY be sent only after the
+  user chooses Extract with AI and only to the configured connection.
+- Model discovery MUST first request the endpoint's model catalog. If a Responses endpoint cannot
+  provide a usable catalog, discovery MAY send a minimal model verification request only after the
+  user chooses Discover models. Verification requests MUST use `store: false` and MUST NOT include
+  source files or extraction prompts. A discovery and its optional verification MUST finish within
+  15 seconds.
+- Connection testing MAY send a minimal verification request only after the user chooses Test
+  connection. It MUST NOT include source files or extraction prompts.
+- Provider endpoints MUST use HTTPS, except HTTP MAY be used for loopback addresses on this computer.
+  Redirects MUST NOT forward an API key to another endpoint.
+- Responses requests and Chat Completions requests MUST use their protocol-specific documented file
+  payload formats. A model or endpoint that rejects a file type MUST produce a clear retryable error.
+- API keys MUST never be written to logs, config files, error messages, or API responses. Requests
+  and responses MUST NOT be logged with document or prompt contents.
 - The MVP MUST NOT include telemetry, analytics, authentication, or a cloud backend.
 - Logs MUST avoid full document contents, image/PDF bytes, secrets, API keys, and credentials.
 - Debug logs MAY be written to debug-logs/; release logs belong in the configured per-user log
   directory. The summary debug.log SHOULD be checked before a feature-specific debug log when
   diagnosing a failure.
-- Future direct AI integration MUST make external transmission explicit and MUST define secret
-  storage before implementation.
+- Clearing local run history MUST NOT claim to erase data already retained by a provider.
 
 ## 12. CLI contract
 
@@ -816,26 +886,31 @@ notarization, or an in-app updater.
 
 ## 14. MVP acceptance criteria
 
-Manual acceptance for a migration build MUST confirm:
+Acceptance MUST confirm:
 
 1. Launch the installed desktop app without a Node.js installation.
 2. Open an existing template and run from the pre-migration data directory.
 3. Import `examples/invoice/invoice-template.docx` and confirm its simple placeholders are discovered.
 4. Confirm placeholders in the document body, headers, and footers are inspected.
-5. Create or reopen a run, import extraction JSON, review at least one field, and render a DOCX.
+5. Cancel the source file picker and confirm no run was created; then complete the one-time run flow
+   with a configured mock AI endpoint and review at least one field.
 6. Confirm the model value stays unchanged, the final value is saved in `review.json`, and the output
    appears as both a numbered file and `result.docx`.
 7. Reopen the rendered DOCX in Word or a compatible viewer and verify the template's formatting.
 8. Run `inspect-template`, `extract-fields`, `validate-fields`, and `render-document` against the
    same data root using the Rust CLI.
 9. Confirm the Help menu opens the documentation links in the system browser.
-10. Confirm the Windows NSIS and macOS ARM DMG artifacts are present and non-empty.
+10. Delete a run with multiple DOCX versions and confirm every version and latest copy is preserved.
+11. Clear history with a simulated preservation failure and confirm failed runs remain available and
+    the UI offers Open saved documents.
+12. Confirm unsupported file types, timeouts, malformed AI responses, invalid IDs, symlinks, and an
+    active run leave local data safe and produce a clear status.
+13. Confirm the Windows NSIS and macOS ARM DMG artifacts are present and non-empty.
 
 ## 15. Explicit non-goals and future seams
 
 The following are outside the MVP and MUST NOT be added as incidental infrastructure:
 
-- direct OpenAI, Anthropic, Gemini, or other model-provider calls;
 - OCR, embeddings, vector databases, RAG, or cloud document processing;
 - agent runtimes, MCP servers, browser automation, or workflow graph editors;
 - user accounts, authentication, collaboration, sync, or remote storage;
@@ -863,8 +938,8 @@ export interface Extractor {
 }
 ```
 
-The MVP does not invoke this interface. Future providers MUST return the same domain extraction
-contract and MUST NOT move business validation or rendering responsibility into the provider.
+The desktop provider adapter MUST return the same domain extraction contract and MUST NOT move
+business validation or rendering responsibility into the provider.
 
 Future MCP or agent integrations MUST consume the same typed application services used by the UI and
 CLI. They MUST define workspace permissions and path exposure before implementation.
@@ -884,8 +959,9 @@ Contributors MUST:
 5. Use Conventional Commits for commit messages.
 
 Decisions requiring explicit product approval include any new persistence root, database, cloud
-backend, authentication, telemetry, direct AI dependency, agent runtime, MCP runtime, sidecar
-process, platform-specific canonical storage, or external transmission of user documents.
+backend, authentication, telemetry, agent runtime, MCP runtime, sidecar process, platform-specific
+canonical storage, or external transmission beyond the explicit Extract with AI action and selected
+connection implemented here.
 
 The implementation status in Section 2 is the baseline for this specification. If code and this
 document disagree, the mismatch MUST be resolved by either correcting the implementation or

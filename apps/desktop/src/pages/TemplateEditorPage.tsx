@@ -172,7 +172,7 @@ export function TemplateEditorPage({
       <header className="page-header">
         <h1>{draft.name}</h1>
         <div className="page-actions">
-          <button onClick={() => navigate({ page: 'newRun', templateId: draft.id })}>
+          <button onClick={() => navigate({ page: 'run', templateId: draft.id })}>
             {t('common.newRun')}
           </button>
           <button className="primary" disabled={busy} onClick={() => void save()}>

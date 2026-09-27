@@ -48,7 +48,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
           <button className="primary" disabled={busy} onClick={() => void importTemplate()}>
             {t('templates.importDocx')}
           </button>
-          <button onClick={() => navigate({ page: 'newRun' })}>{t('common.newRun')}</button>
+          <button onClick={() => navigate({ page: 'run' })}>{t('common.newRun')}</button>
         </div>
       </header>
 
@@ -82,7 +82,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
                   </button>
                   <button
                     className="link"
-                    onClick={() => navigate({ page: 'newRun', templateId: template.id })}
+                    onClick={() => navigate({ page: 'run', templateId: template.id })}
                   >
                     {t('common.newRun')}
                   </button>

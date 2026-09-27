@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HomePage } from './pages/HomePage';
-import { NewRunPage } from './pages/NewRunPage';
 import { RunPage } from './pages/RunPage';
-import { RunsPage } from './pages/RunsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TemplateEditorPage } from './pages/TemplateEditorPage';
 import { TemplatesPage } from './pages/TemplatesPage';
@@ -13,15 +11,13 @@ export type Route =
   | { page: 'home' }
   | { page: 'templates' }
   | { page: 'templateEditor'; templateId: string }
-  | { page: 'newRun'; templateId?: string }
-  | { page: 'run'; runId: string }
-  | { page: 'runs' }
-  | { page: 'settings' };
+  | { page: 'run'; runId?: string; templateId?: string }
+  | { page: 'settings'; category?: 'general' | 'appearance' | 'aiConnections' | 'data' };
 
 export type Navigate = (route: Route) => void;
 
 export function App() {
-  const [route, setRoute] = useState<Route>({ page: 'home' });
+  const [route, setRoute] = useState<Route>({ page: 'run' });
   const { t } = useTranslation();
 
   const navigate = useCallback<Navigate>((next) => setRoute(next), []);
@@ -45,7 +41,7 @@ export function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <button type="button" className="brand" onClick={() => navigate({ page: 'home' })}>
+        <button type="button" className="brand" onClick={() => navigate({ page: 'run' })}>
           <span className="brand-mark" aria-hidden="true">
             F
           </span>
@@ -53,10 +49,10 @@ export function App() {
         </button>
         <nav>
           <button
-            className={route.page === 'home' ? 'nav-item active' : 'nav-item'}
-            onClick={() => navigate({ page: 'home' })}
+            className={route.page === 'run' ? 'nav-item active' : 'nav-item'}
+            onClick={() => navigate({ page: 'run' })}
           >
-            {t('nav.home')}
+            {t('nav.run')}
           </button>
           <button
             className={
@@ -67,14 +63,6 @@ export function App() {
             onClick={() => navigate({ page: 'templates' })}
           >
             {t('nav.templates')}
-          </button>
-          <button
-            className={
-              route.page === 'runs' || route.page === 'run' ? 'nav-item active' : 'nav-item'
-            }
-            onClick={() => navigate({ page: 'runs' })}
-          >
-            {t('nav.runs')}
           </button>
           <button
             className={route.page === 'settings' ? 'nav-item active' : 'nav-item'}
@@ -91,12 +79,10 @@ export function App() {
         {route.page === 'templateEditor' && (
           <TemplateEditorPage templateId={route.templateId} navigate={navigate} />
         )}
-        {route.page === 'newRun' && (
-          <NewRunPage initialTemplateId={route.templateId} navigate={navigate} />
+        {route.page === 'run' && (
+          <RunPage runId={route.runId} initialTemplateId={route.templateId} navigate={navigate} />
         )}
-        {route.page === 'run' && <RunPage runId={route.runId} navigate={navigate} />}
-        {route.page === 'runs' && <RunsPage navigate={navigate} />}
-        {route.page === 'settings' && <SettingsPage navigate={navigate} />}
+        {route.page === 'settings' && <SettingsPage category={route.category} navigate={navigate} />}
       </main>
     </div>
   );

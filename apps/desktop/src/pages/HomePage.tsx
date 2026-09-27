@@ -1,19 +1,16 @@
-import type { RunSummary, TemplateSummary } from '../lib/generated-types';
+import type { TemplateSummary } from '../lib/generated-types';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';
 import { ErrorBanner, Section } from '../components/ui';
 import { extractError, useAsyncData } from '../hooks/useAsyncData';
-import { formatDateTime } from '../lib/i18n';
 
 export function HomePage({ navigate }: { navigate: Navigate }) {
   const { t } = useTranslation();
   const templates = useAsyncData(() => window.fillforge.templates.list(), []);
-  const runs = useAsyncData(() => window.fillforge.runs.list(), []);
   const [actionError, setActionError] = useState<{ code: string; message: string } | null>(null);
 
-  const error = actionError ?? templates.error ?? runs.error;
-  const recentRuns: RunSummary[] = (runs.data ?? []).slice(0, 5);
+  const error = actionError ?? templates.error;
 
   async function importTemplate() {
     try {
@@ -43,8 +40,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
 
       <ErrorBanner error={error} />
 
-      <div className="grid-2">
-        <Section title={t('home.templatesCount', { total: templates.data?.length ?? 0 })}>
+      <Section title={t('home.templatesCount', { total: templates.data?.length ?? 0 })}>
           {templates.loading && <p className="empty-hint">{t('common.loading')}</p>}
           <ul className="list">
             {(templates.data ?? []).map((template: TemplateSummary) => (
@@ -67,35 +63,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
           {(templates.data?.length ?? 0) === 0 && !templates.loading && (
             <p className="empty-hint">{t('home.emptyTemplates')}</p>
           )}
-        </Section>
-
-        <Section
-          title={t('home.recentRuns')}
-          actions={
-            <button className="link" onClick={() => navigate({ page: 'runs' })}>
-              {t('home.viewAll')}
-            </button>
-          }
-        >
-          {runs.loading && <p className="empty-hint">{t('common.loading')}</p>}
-          <ul className="list">
-            {recentRuns.map((run) => (
-              <li key={run.id}>
-                <button className="link" onClick={() => navigate({ page: 'run', runId: run.id })}>
-                  {run.id}
-                </button>
-                <span className="muted">
-                  {' '}
-                  · {run.templateId} · {formatDateTime(run.createdAt)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {recentRuns.length === 0 && !runs.loading && (
-            <p className="empty-hint">{t('home.emptyRuns')}</p>
-          )}
-        </Section>
-      </div>
+      </Section>
 
       <Section title={t('home.workflow')}>
         <ol className="workflow">
