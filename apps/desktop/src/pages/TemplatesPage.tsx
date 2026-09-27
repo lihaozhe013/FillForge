@@ -78,7 +78,7 @@ export function TemplatesPage({ navigate }: { navigate: Navigate }) {
                     className="link"
                     onClick={() => navigate({ page: 'templateEditor', templateId: template.id })}
                   >
-                    {t('common.open')}
+                    {t('templates.edit')}
                   </button>
                   <button
                     className="link"

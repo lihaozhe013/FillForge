@@ -41,6 +41,7 @@
     "colDescription": "Description",
     "colDocument": "Document",
     "colActions": "Actions",
+    "edit": "Edit",
     "documentMissing": "missing",
     "duplicate": "Duplicate",
     "delete": "Delete",

@@ -41,6 +41,7 @@
     "colDescription": "描述",
     "colDocument": "文档",
     "colActions": "操作",
+    "edit": "编辑",
     "documentMissing": "缺失",
     "duplicate": "创建副本",
     "delete": "删除",
