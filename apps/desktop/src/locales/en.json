@@ -311,10 +311,10 @@
     "discovering": "Discovering…",
     "discoveredModels": "Discovered models",
     "searchDiscoveredModels": "Search discovered models",
-    "modelSearchResults": "Showing {shown} of {count} matching models",
+    "modelSearchResults": "Showing {{shown}} of {{count}} matching models",
     "noMatchingModels": "No matching models.",
-    "showMoreModels": "Show {count} more",
-    "modelNumber": "Model {index}",
+    "showMoreModels": "Show {{count}} more",
+    "modelNumber": "Model {{index}}",
     "modelIdLabel": "Model ID",
     "displayNameLabel": "Display name",
     "optionalPlaceholder": "Optional",
@@ -322,7 +322,7 @@
     "moveDown": "Move down",
     "modelAdded": "Added",
     "modelLimitReached": "A connection can contain up to 256 models.",
-    "modelsFound": "Found {count} models. Add the models you want to use.",
+    "modelsFound": "Found {{count}} models. Add the models you want to use.",
     "modelVerified": "The endpoint verified this model. Add it to the connection to save it.",
     "testConnection": "Test connection",
     "connectionSaved": "Connection saved. The API key is stored securely.",
@@ -366,6 +366,14 @@
     "no-output": "no output"
   },
   "errors": {
+    "details": {
+      "invalidJsonSyntax": "Invalid JSON syntax at line {{line}}, column {{column}}.",
+      "expectedExtractionObject": "The extraction result must be a JSON object of fields.",
+      "expectedObject": "This field must be a JSON object.",
+      "requiredExtractionProperties": "Field {{field}} must include value, status, and evidence.",
+      "unknownExtractionStatus": "Field status {{status}} is not supported.",
+      "invalidEvidence": "Evidence for field {{field}} must be text or null."
+    },
     "codes": {
       "template_not_found": "The template could not be found.",
       "invalid_template_schema": "The template schema is invalid.",
@@ -384,14 +392,21 @@
       "docx_render_failed": "The DOCX document could not be rendered."
     },
     "issues": {
-      "type_mismatch": "Field {{field}} has an unexpected type.",
+      "type_mismatch": "Field {{field}} should be a {{expected}}, but received {{actual}}.",
       "rule_violation": "Field {{field}} violates a validation rule.",
+      "rules": {
+        "regex": "Field {{field}} must match the pattern {{pattern}}.",
+        "minimum": "Field {{field}} must be at least {{minimum}}.",
+        "maximum": "Field {{field}} must be at most {{maximum}}.",
+        "dateFormat": "Field {{field}} must use the date format {{format}}.",
+        "enum": "Field {{field}} must be one of: {{values}}."
+      },
       "invalid_date": "Field {{field}} is not a valid calendar date.",
       "invalid_validation_rule": "Field {{field}} has an invalid validation rule.",
-      "required_value_missing": "Required field {{field}} has no value.",
-      "unknown_field": "Field {{field}} is not configured in the template.",
+      "required_value_missing": "Required field {{field}} ({{label}}) has no value.",
+      "unknown_field": "Field {{field}} is not configured in template {{template}}.",
       "missing_field": "Required field {{field}} is missing from the extraction result.",
-      "status_value_conflict": "Field {{field}} has a status that conflicts with its value.",
+      "status_value_conflict": "Field {{field}} has status {{status}} but a non-empty value.",
       "required_not_found": "Required field {{field}} was reported as not found.",
       "required_ambiguous": "Required field {{field}} was reported as ambiguous."
     }

@@ -9,6 +9,27 @@ use indexmap::IndexMap;
 use regex::Regex;
 use serde_json::{Map, Value};
 
+fn build_issue(
+    field: &str,
+    code: &str,
+    message: String,
+    message_key: Option<&str>,
+    mut message_args: IndexMap<String, String>,
+) -> ExtractionIssue {
+    message_args.insert("field".to_string(), field.to_string());
+    ExtractionIssue {
+        field: field.to_string(),
+        code: code.to_string(),
+        message,
+        message_key: message_key.map(str::to_string),
+        message_args: Some(message_args),
+    }
+}
+
+fn message_args(entries: impl IntoIterator<Item = (String, String)>) -> IndexMap<String, String> {
+    entries.into_iter().collect()
+}
+
 pub fn build_expected_json(fields: &FieldDefinitions) -> String {
     let mut shape = Map::new();
     for (key, field) in fields {
@@ -125,22 +146,45 @@ pub fn parse_extraction(raw: &str) -> AppResult<ExtractionResult> {
             "extraction_parse_failed",
             format!("The pasted extraction result is not valid JSON: {error}"),
         )
+        .with_details(serde_json::json!({
+            "messageKey": "details.invalidJsonSyntax",
+            "messageArgs": {
+                "line": error.line().to_string(),
+                "column": error.column().to_string()
+            },
+            "message": error.to_string()
+        }))
     })?;
     let Some(object) = value.as_object() else {
-        return Err(AppError::validation("The extraction result does not match the expected structure (fields need value, status, evidence).", serde_json::json!([{"message":"Expected an object of fields."}])));
+        return Err(AppError::validation(
+            "The extraction result does not match the expected structure (fields need value, status, evidence).",
+            serde_json::json!([{
+                "messageKey": "details.expectedExtractionObject",
+                "message": "Expected an object of fields."
+            }]),
+        ));
     };
     let mut result = IndexMap::new();
     let mut issues = Vec::new();
     for (key, field) in object {
         let Some(field) = field.as_object() else {
-            issues.push(serde_json::json!({"path":[key],"message":"Expected an object."}));
+            issues.push(serde_json::json!({
+                "path": [key],
+                "messageKey": "details.expectedObject",
+                "message": "Expected an object."
+            }));
             continue;
         };
         let value = field.get("value");
         let status = field.get("status").and_then(Value::as_str);
         let evidence = field.get("evidence");
         if value.is_none() || status.is_none() || evidence.is_none() {
-            issues.push(serde_json::json!({"path":[key],"message":"Each field needs value, status, and evidence."}));
+            issues.push(serde_json::json!({
+                "path": [key],
+                "messageKey": "details.requiredExtractionProperties",
+                "messageArgs": {"field": key},
+                "message": "Each field needs value, status, and evidence."
+            }));
             continue;
         }
         let status = match status.unwrap_or_default() {
@@ -148,7 +192,12 @@ pub fn parse_extraction(raw: &str) -> AppResult<ExtractionResult> {
             "not_found" => ExtractionStatus::NotFound,
             "ambiguous" => ExtractionStatus::Ambiguous,
             other => {
-                issues.push(serde_json::json!({"path":[key,"status"],"message":format!("Unknown extraction status: {other}")}));
+                issues.push(serde_json::json!({
+                    "path": [key, "status"],
+                    "messageKey": "details.unknownExtractionStatus",
+                    "messageArgs": {"status": other},
+                    "message": format!("Unknown extraction status: {other}")
+                }));
                 continue;
             }
         };
@@ -156,7 +205,12 @@ pub fn parse_extraction(raw: &str) -> AppResult<ExtractionResult> {
             Value::Null => None,
             Value::String(text) => Some(text.clone()),
             _ => {
-                issues.push(serde_json::json!({"path":[key,"evidence"],"message":"Evidence must be a string or null."}));
+                issues.push(serde_json::json!({
+                    "path": [key, "evidence"],
+                    "messageKey": "details.invalidEvidence",
+                    "messageArgs": {"field": key},
+                    "message": "Evidence must be a string or null."
+                }));
                 continue;
             }
         };
@@ -337,19 +391,31 @@ fn type_issue(key: &str, field: &FieldDefinition, value: &Value) -> Option<Extra
     } else {
         actual.to_string()
     };
-    Some(ExtractionIssue {
-        field: key.to_string(),
-        code: "type_mismatch".to_string(),
-        message: format!("Field \"{key}\" should be a {expected}, but received {actual_desc}."),
-    })
+    Some(build_issue(
+        key,
+        "type_mismatch",
+        format!("Field \"{key}\" should be a {expected}, but received {actual_desc}."),
+        None,
+        message_args([
+            ("expected".to_string(), expected.to_string()),
+            ("actual".to_string(), actual_desc),
+        ]),
+    ))
 }
 
-fn rule_issue(field: &str, message: String) -> ExtractionIssue {
-    ExtractionIssue {
-        field: field.to_string(),
-        code: "rule_violation".to_string(),
+fn rule_issue(
+    field: &str,
+    message: String,
+    message_key: &str,
+    message_args: IndexMap<String, String>,
+) -> ExtractionIssue {
+    build_issue(
+        field,
+        "rule_violation",
         message,
-    }
+        Some(message_key),
+        message_args,
+    )
 }
 
 fn field_rule_issues(key: &str, field: &FieldDefinition, value: &Value) -> Vec<ExtractionIssue> {
@@ -365,11 +431,13 @@ fn field_rule_issues(key: &str, field: &FieldDefinition, value: &Value) -> Vec<E
         && value.is_string()
         && parse_date_parts(value).is_none()
     {
-        issues.push(ExtractionIssue {
-            field: key.to_string(),
-            code: "invalid_date".to_string(),
-            message: format!("Field \"{key}\" is not a valid calendar date."),
-        });
+        issues.push(build_issue(
+            key,
+            "invalid_date",
+            format!("Field \"{key}\" is not a valid calendar date."),
+            None,
+            IndexMap::new(),
+        ));
     }
     let Some(rules) = &field.validation else {
         return issues;
@@ -379,12 +447,16 @@ fn field_rule_issues(key: &str, field: &FieldDefinition, value: &Value) -> Vec<E
             Ok(regex) if !regex.is_match(&text) => issues.push(rule_issue(
                 key,
                 format!("Field \"{key}\" must match the pattern {pattern}."),
+                "issues.rules.regex",
+                message_args([("pattern".to_string(), pattern.clone())]),
             )),
-            Err(_) => issues.push(ExtractionIssue {
-                field: key.to_string(),
-                code: "invalid_validation_rule".to_string(),
-                message: format!("Field \"{key}\" has an invalid regular expression rule."),
-            }),
+            Err(_) => issues.push(build_issue(
+                key,
+                "invalid_validation_rule",
+                format!("Field \"{key}\" has an invalid regular expression rule."),
+                None,
+                IndexMap::new(),
+            )),
             _ => {}
         }
     }
@@ -401,6 +473,11 @@ fn field_rule_issues(key: &str, field: &FieldDefinition, value: &Value) -> Vec<E
                         "Field \"{key}\" must be at least {}.",
                         rules.minimum.unwrap_or_default()
                     ),
+                    "issues.rules.minimum",
+                    message_args([(
+                        "minimum".to_string(),
+                        rules.minimum.unwrap_or_default().to_string(),
+                    )]),
                 ));
             }
             if rules.maximum.is_some_and(|maximum| numeric > maximum) {
@@ -410,6 +487,11 @@ fn field_rule_issues(key: &str, field: &FieldDefinition, value: &Value) -> Vec<E
                         "Field \"{key}\" must be at most {}.",
                         rules.maximum.unwrap_or_default()
                     ),
+                    "issues.rules.maximum",
+                    message_args([(
+                        "maximum".to_string(),
+                        rules.maximum.unwrap_or_default().to_string(),
+                    )]),
                 ));
             }
         }
@@ -422,6 +504,8 @@ fn field_rule_issues(key: &str, field: &FieldDefinition, value: &Value) -> Vec<E
             issues.push(rule_issue(
                 key,
                 format!("Field \"{key}\" must use the date format {date_format}."),
+                "issues.rules.dateFormat",
+                message_args([("format".to_string(), date_format.clone())]),
             ));
         }
     }
@@ -430,6 +514,8 @@ fn field_rule_issues(key: &str, field: &FieldDefinition, value: &Value) -> Vec<E
             issues.push(rule_issue(
                 key,
                 format!("Field \"{key}\" must be one of: {}.", allowed.join(", ")),
+                "issues.rules.enum",
+                message_args([("values".to_string(), allowed.join(", "))]),
             ));
         }
     }
@@ -451,11 +537,13 @@ pub fn validate_field_value(
     };
     if is_blank(candidate) {
         return if field.required {
-            vec![ExtractionIssue {
-                field: key.to_string(),
-                code: "required_value_missing".to_string(),
-                message: format!("Required field \"{key}\" ({}) has no value.", field.label),
-            }]
+            vec![build_issue(
+                key,
+                "required_value_missing",
+                format!("Required field \"{key}\" ({}) has no value.", field.label),
+                None,
+                message_args([("label".to_string(), field.label.clone())]),
+            )]
         } else {
             Vec::new()
         };
@@ -472,13 +560,17 @@ fn unknown_field_issues(
 ) -> Vec<ExtractionIssue> {
     values
         .filter(|key| !template.fields.contains_key(key))
-        .map(|field| ExtractionIssue {
-            message: format!(
-                "Field \"{field}\" is not configured in template \"{}\".",
-                template.id
-            ),
-            field,
-            code: "unknown_field".to_string(),
+        .map(|field| {
+            build_issue(
+                &field,
+                "unknown_field",
+                format!(
+                    "Field \"{field}\" is not configured in template \"{}\".",
+                    template.id
+                ),
+                None,
+                message_args([("template".to_string(), template.id.clone())]),
+            )
         })
         .collect()
 }
@@ -523,13 +615,13 @@ pub fn validate_extraction(
     for (key, field) in &template.fields {
         let Some(extracted) = result.get(key) else {
             if field.required {
-                issues.push(ExtractionIssue {
-                    field: key.clone(),
-                    code: "missing_field".to_string(),
-                    message: format!(
-                        "Required field \"{key}\" is missing from the extraction result."
-                    ),
-                });
+                issues.push(build_issue(
+                    key,
+                    "missing_field",
+                    format!("Required field \"{key}\" is missing from the extraction result."),
+                    None,
+                    IndexMap::new(),
+                ));
             }
             continue;
         };
@@ -538,18 +630,21 @@ pub fn validate_extraction(
             ExtractionStatus::NotFound | ExtractionStatus::Ambiguous
         ) {
             if !is_blank(&extracted.value) {
-                issues.push(ExtractionIssue {
-                    field: key.clone(),
-                    code: "status_value_conflict".to_string(),
-                    message: format!(
+                let status = if matches!(extracted.status, ExtractionStatus::NotFound) {
+                    "not_found"
+                } else {
+                    "ambiguous"
+                };
+                issues.push(build_issue(
+                    key,
+                    "status_value_conflict",
+                    format!(
                         "Field \"{key}\" has status \"{}\" but a non-empty value.",
-                        if matches!(extracted.status, ExtractionStatus::NotFound) {
-                            "not_found"
-                        } else {
-                            "ambiguous"
-                        }
+                        status
                     ),
-                });
+                    None,
+                    message_args([("status".to_string(), status.to_string())]),
+                ));
             }
             if field.required {
                 let status = if matches!(extracted.status, ExtractionStatus::NotFound) {
@@ -557,16 +652,18 @@ pub fn validate_extraction(
                 } else {
                     "ambiguous"
                 };
-                issues.push(ExtractionIssue {
-                    field: key.clone(),
-                    code: if status == "not_found" {
-                        "required_not_found"
-                    } else {
-                        "required_ambiguous"
-                    }
-                    .to_string(),
-                    message: format!("Required field \"{key}\" was reported as {status}."),
-                });
+                let code = if status == "not_found" {
+                    "required_not_found"
+                } else {
+                    "required_ambiguous"
+                };
+                issues.push(build_issue(
+                    key,
+                    code,
+                    format!("Required field \"{key}\" was reported as {status}."),
+                    None,
+                    IndexMap::new(),
+                ));
             }
             continue;
         }
@@ -589,6 +686,47 @@ pub fn json_object_to_string(value: &Value) -> String {
         Value::Bool(v) => v.to_string(),
         Value::Number(v) => v.to_string(),
         other => other.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_extraction, validate_field_value};
+    use crate::model::{FieldDefinition, FieldType, FieldValidation};
+    use serde_json::json;
+
+    #[test]
+    fn validation_issues_include_localization_keys_and_dynamic_values() {
+        let field = FieldDefinition {
+            label: "Amount".to_string(),
+            field_type: FieldType::Number,
+            validation: Some(FieldValidation {
+                minimum: Some(3.0),
+                ..FieldValidation::default()
+            }),
+            ..FieldDefinition::default()
+        };
+
+        let issues = validate_field_value("amount", &field, &json!(2), false);
+
+        assert_eq!(issues.len(), 1);
+        assert_eq!(
+            issues[0].message_key.as_deref(),
+            Some("issues.rules.minimum")
+        );
+        let args = issues[0].message_args.as_ref().unwrap();
+        assert_eq!(args.get("field").map(String::as_str), Some("amount"));
+        assert_eq!(args.get("minimum").map(String::as_str), Some("3"));
+    }
+
+    #[test]
+    fn invalid_json_errors_include_localized_syntax_details() {
+        let error = parse_extraction("{").unwrap_err();
+
+        assert_eq!(error.code, "extraction_parse_failed");
+        let details = error.details.unwrap();
+        assert_eq!(details["messageKey"], "details.invalidJsonSyntax");
+        assert_eq!(details["messageArgs"]["line"], "1");
     }
 }
 

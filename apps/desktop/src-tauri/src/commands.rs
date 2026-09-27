@@ -619,6 +619,7 @@ pub fn runs_clear_all(state: State<'_, DesktopState>) -> IpcResult<ClearRunsResu
             match acquire_run(&state, &id) {
                 Err(error) => summary.failures.push(RunDeleteFailure {
                     id,
+                    code: error.code,
                     message: error.message,
                 }),
                 Ok(_active_run) => {
@@ -633,6 +634,7 @@ pub fn runs_clear_all(state: State<'_, DesktopState>) -> IpcResult<ClearRunsResu
                         }
                         Err(error) => summary.failures.push(RunDeleteFailure {
                             id,
+                            code: error.code,
                             message: error.message,
                         }),
                     }

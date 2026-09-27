@@ -393,6 +393,7 @@ pub struct CreateDocumentResult {
 #[ts(rename_all = "camelCase")]
 pub struct RunDeleteFailure {
     pub id: String,
+    pub code: String,
     pub message: String,
 }
 
@@ -504,6 +505,12 @@ pub struct ExtractionIssue {
     pub field: String,
     pub code: String,
     pub message: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub message_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub message_args: Option<IndexMap<String, String>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]

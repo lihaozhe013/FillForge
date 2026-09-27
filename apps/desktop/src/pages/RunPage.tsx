@@ -1,6 +1,7 @@
 import type {
   ExtractionIssue,
   ExtractionResult,
+  RunDeleteFailure,
   RunDetails,
   RunSummary,
   TemplateSchema,
@@ -9,7 +10,7 @@ import type {
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Navigate } from '../App';
-import { ErrorBanner, Section, StatusBadge } from '../components/ui';
+import { ErrorBanner, Section, StatusBadge, translateErrorDetail } from '../components/ui';
 import { extractError, useAsyncData } from '../hooks/useAsyncData';
 import type { AppErrorDtoLike } from '../lib/ipc-protocol';
 import { formatDateTime } from '../lib/i18n';
@@ -57,7 +58,7 @@ export function RunPage({
   const [notice, setNotice] = useState<string | null>(null);
   const [clearResult, setClearResult] = useState<{
     deleted: number;
-    failures: Array<{ id: string; message: string }>;
+    failures: RunDeleteFailure[];
   } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -417,7 +418,7 @@ export function RunPage({
                         placeholder={t('run.valuePlaceholder')}
                       />
                       {fieldIssues.length > 0 && (
-                        <span className="field-validation">{fieldIssues.map((issue) => issue.message).join(' ')}</span>
+                        <span className="field-validation">{fieldIssues.map((issue) => translateErrorDetail(t, issue)).join(' ')}</span>
                       )}
                       <details className="field-evidence">
                         <summary><StatusBadge status={extracted.status} />{t('run.viewEvidence')}</summary>
@@ -433,7 +434,7 @@ export function RunPage({
               {issues.some((issue) => !fieldEntries.some(([key]) => key === issue.field)) && (
                 <div className="issue-list">
                   {issues.filter((issue) => !fieldEntries.some(([key]) => key === issue.field)).map((issue) => (
-                    <div key={`${issue.field}:${issue.code}`}>{issue.message}</div>
+                    <div key={`${issue.field}:${issue.code}`}>{translateErrorDetail(t, issue)}</div>
                   ))}
                 </div>
               )}
@@ -545,7 +546,10 @@ export function RunPage({
                 <p>{t('history.failuresRemain', { count: clearResult.failures.length })}</p>
                 <ul>
                   {clearResult.failures.map((failure) => (
-                    <li key={failure.id}>{failure.message}</li>
+                    <li key={failure.id}>
+                      {t(`errors.codes.${failure.code}`, { defaultValue: failure.message })}
+                      {failure.code === 'internal_error' && <p>{failure.message}</p>}
+                    </li>
                   ))}
                 </ul>
               </div>

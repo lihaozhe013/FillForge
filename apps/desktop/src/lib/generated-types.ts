@@ -60,7 +60,7 @@ export type RunDeleteResult = { preservedDocumentCount: number, preservedDirecto
 
 export type CreateDocumentResult = { review: ReviewedRecord, issues: Array<ExtractionIssue>, output?: RenderedArtifact, };
 
-export type RunDeleteFailure = { id: string, message: string, };
+export type RunDeleteFailure = { id: string, code: string, message: string, };
 
 export type ClearRunsResult = { deletedCount: number, preservedDocumentCount: number, failures: Array<RunDeleteFailure>, };
 
@@ -86,7 +86,7 @@ export type ReviewedRecord = { schema_version: number, fields: { [key in string]
 
 export type NormalizedRecord = { schema_version: number, values: { [key in string]: JsonValue }, };
 
-export type ExtractionIssue = { field: string, code: string, message: string, };
+export type ExtractionIssue = { field: string, code: string, message: string, messageKey?: string, messageArgs?: { [key in string]: string }, };
 
 export type RenderedArtifact = { path: string, filename: string, };
 
