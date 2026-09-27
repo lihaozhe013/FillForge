@@ -105,6 +105,11 @@ pub fn resolve_config(config: &AppConfig) -> ResolvedAppConfig {
             .as_ref()
             .and_then(|extract| extract.prompt_version.clone())
             .unwrap_or_else(|| DEFAULT_PROMPT_VERSION.to_string()),
+        reasoning_effort: config
+            .extraction
+            .as_ref()
+            .and_then(|extract| extract.reasoning_effort)
+            .unwrap_or_default(),
     }
 }
 
@@ -120,6 +125,7 @@ pub fn config_from_resolved(value: &ResolvedAppConfig) -> AppConfig {
         }),
         extraction: Some(ExtractionConfig {
             prompt_version: Some(value.prompt_version.clone()),
+            reasoning_effort: Some(value.reasoning_effort),
         }),
     }
 }
@@ -130,5 +136,45 @@ pub fn resolve_locale(language: &AppLanguageSetting, system_locale: &str) -> &'s
         AppLanguageSetting::ZhCn => "zh-CN",
         AppLanguageSetting::System if system_locale.to_lowercase().starts_with("zh") => "zh-CN",
         AppLanguageSetting::System => "en",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{config_from_resolved, resolve_config};
+    use crate::model::{
+        AiReasoningEffort, AppConfig, AppLanguageSetting, AppTheme, ResolvedAppConfig,
+    };
+
+    #[test]
+    fn older_configs_use_the_provider_reasoning_default() {
+        let config: AppConfig = serde_yaml_ng::from_str(
+            "schema_version: 1\nextraction:\n  prompt_version: fillforge-extraction-v1\n",
+        )
+        .expect("parse legacy config");
+
+        assert_eq!(
+            resolve_config(&config).reasoning_effort,
+            AiReasoningEffort::Default
+        );
+    }
+
+    #[test]
+    fn selected_reasoning_effort_round_trips_through_app_config() {
+        let resolved = ResolvedAppConfig {
+            theme: AppTheme::System,
+            language: AppLanguageSetting::System,
+            show_advanced_fields: false,
+            prompt_version: "fillforge-extraction-v1".to_string(),
+            reasoning_effort: AiReasoningEffort::High,
+        };
+        let config = config_from_resolved(&resolved);
+        let yaml = serde_yaml_ng::to_string(&config).expect("serialize app config");
+        let loaded: AppConfig = serde_yaml_ng::from_str(&yaml).expect("deserialize app config");
+
+        assert_eq!(
+            resolve_config(&loaded).reasoning_effort,
+            AiReasoningEffort::High
+        );
     }
 }

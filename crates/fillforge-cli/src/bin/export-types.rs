@@ -28,6 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         UiConfig,
         EditorConfig,
         ExtractionConfig,
+        AiReasoningEffort,
         ResolvedAppConfig,
         AiProtocol,
         AiModelProfile,

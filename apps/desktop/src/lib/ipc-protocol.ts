@@ -34,6 +34,7 @@ export interface SettingsUpdateDto {
   language: ResolvedAppConfig['language'];
   showAdvancedFields: boolean;
   promptVersion: string;
+  reasoningEffort: ResolvedAppConfig['reasoningEffort'];
 }
 
 export type ImportExtractionResultDto = {

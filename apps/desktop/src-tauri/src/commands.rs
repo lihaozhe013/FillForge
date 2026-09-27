@@ -2,8 +2,8 @@ use crate::ai::AiConnectionStore;
 use crate::logger::AppLogger;
 use crate::menu::install_menu;
 use fillforge_domain::model::{
-    AiConnectionInput, AiModelDiscoveryRequest, AppErrorDto, AppLanguageSetting, AppTheme,
-    ClearRunsResult, CreateDocumentResult, GeneratedPrompt, ImportExtractionResult,
+    AiConnectionInput, AiModelDiscoveryRequest, AiReasoningEffort, AppErrorDto, AppLanguageSetting,
+    AppTheme, ClearRunsResult, CreateDocumentResult, GeneratedPrompt, ImportExtractionResult,
     ResolvedAppConfig, ReviewSaveResult, RunDeleteFailure, RunDeleteResult, RunMetadata,
     TemplateSchema, TemplateSummary,
 };
@@ -183,6 +183,8 @@ pub struct SettingsInput {
     pub language: AppLanguageSetting,
     pub show_advanced_fields: bool,
     pub prompt_version: String,
+    #[serde(default)]
+    pub reasoning_effort: AiReasoningEffort,
 }
 
 #[derive(Deserialize)]
@@ -407,6 +409,7 @@ pub fn settings_save(
             language: input.language,
             show_advanced_fields: input.show_advanced_fields,
             prompt_version: input.prompt_version,
+            reasoning_effort: input.reasoning_effort,
         })
     }).map(|config| {
             if let Err(error) = install_menu(&app, &config.language) {
@@ -661,9 +664,15 @@ pub async fn runs_extract_with_ai(
                         ));
                     }
                     let prompt = state.context.run_service.generate_prompt(&input.id)?;
+                    let reasoning_effort = state.context.load_settings()?.reasoning_effort;
                     let raw = state
                         .ai_connections
-                        .extract_run(&state.context.run_repository, &input.id, &prompt)
+                        .extract_run(
+                            &state.context.run_repository,
+                            &input.id,
+                            &prompt,
+                            reasoning_effort,
+                        )
                         .await?;
                     state.context.run_service.import_extraction(&input.id, &raw)
                 }

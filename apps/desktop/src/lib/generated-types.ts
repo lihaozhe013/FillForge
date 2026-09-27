@@ -34,9 +34,11 @@ export type UiConfig = { theme?: AppTheme, language?: AppLanguageSetting, };
 
 export type EditorConfig = { show_advanced_fields?: boolean, };
 
-export type ExtractionConfig = { prompt_version?: string, };
+export type ExtractionConfig = { prompt_version?: string, reasoning_effort?: AiReasoningEffort, };
 
-export type ResolvedAppConfig = { theme: AppTheme, language: AppLanguageSetting, showAdvancedFields: boolean, promptVersion: string, };
+export type AiReasoningEffort = "default" | "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+
+export type ResolvedAppConfig = { theme: AppTheme, language: AppLanguageSetting, showAdvancedFields: boolean, promptVersion: string, reasoningEffort: AiReasoningEffort, };
 
 export type AiProtocol = "responses" | "chat-completions";
 

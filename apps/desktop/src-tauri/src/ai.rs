@@ -3,7 +3,7 @@ use base64::Engine;
 use fillforge_domain::error::{AppError, AppResult};
 use fillforge_domain::model::{
     AiConnectionInput, AiConnectionList, AiConnectionSummary, AiModelDiscoveryRequest,
-    AiModelProfile, AiProtocol, ModelDiscoveryResult,
+    AiModelProfile, AiProtocol, AiReasoningEffort, ModelDiscoveryResult,
 };
 use fillforge_domain::runs::RunRepository;
 use fillforge_domain::storage::write_json;
@@ -337,6 +337,7 @@ impl AiConnectionStore {
         repository: &RunRepository,
         id: &str,
         prompt: &str,
+        reasoning_effort: AiReasoningEffort,
     ) -> AppResult<String> {
         let (connection, api_key) = self.default_connection()?;
         let model = connection
@@ -357,7 +358,13 @@ impl AiConnectionStore {
             ));
         }
         let endpoint = normalize_base_url(&connection.base_url)?;
-        let payload = build_extraction_payload(connection.protocol, &model.model, prompt, &files)?;
+        let payload = build_extraction_payload(
+            connection.protocol,
+            &model.model,
+            prompt,
+            reasoning_effort,
+            &files,
+        )?;
         let url = match connection.protocol {
             AiProtocol::Responses => format!("{endpoint}/responses"),
             AiProtocol::ChatCompletions => format!("{endpoint}/chat/completions"),
@@ -644,6 +651,7 @@ fn build_extraction_payload(
     protocol: AiProtocol,
     model: &str,
     prompt: &str,
+    reasoning_effort: AiReasoningEffort,
     files: &[SourceFile],
 ) -> AppResult<Value> {
     let mut content = Vec::new();
@@ -682,14 +690,34 @@ fn build_extraction_payload(
             });
         }
     }
-    Ok(match protocol {
+    let mut payload = match protocol {
         AiProtocol::Responses => {
             json!({"model":model,"input":[{"role":"user","content":content}],"store":false})
         }
         AiProtocol::ChatCompletions => {
             json!({"model":model,"messages":[{"role":"user","content":content}]})
         }
-    })
+    };
+    if let Some(effort) = reasoning_effort_name(reasoning_effort) {
+        match protocol {
+            AiProtocol::Responses => payload["reasoning"] = json!({"effort":effort}),
+            AiProtocol::ChatCompletions => payload["reasoning_effort"] = json!(effort),
+        }
+    }
+    Ok(payload)
+}
+
+fn reasoning_effort_name(effort: AiReasoningEffort) -> Option<&'static str> {
+    match effort {
+        AiReasoningEffort::Default => None,
+        AiReasoningEffort::None => Some("none"),
+        AiReasoningEffort::Minimal => Some("minimal"),
+        AiReasoningEffort::Low => Some("low"),
+        AiReasoningEffort::Medium => Some("medium"),
+        AiReasoningEffort::High => Some("high"),
+        AiReasoningEffort::Xhigh => Some("xhigh"),
+        AiReasoningEffort::Max => Some("max"),
+    }
 }
 
 fn extract_response_text(protocol: AiProtocol, value: &Value) -> AppResult<String> {
@@ -741,7 +769,8 @@ mod tests {
     };
     use fillforge_domain::docx::{DocumentRenderer, RenderInput, TemplateInspection};
     use fillforge_domain::model::{
-        AiConnectionInput, AiModelProfile, AiProtocol, FieldDefinition, FieldType, TemplateBinding,
+        AiConnectionInput, AiModelProfile, AiProtocol, AiReasoningEffort, FieldDefinition,
+        FieldType, TemplateBinding,
     };
     use fillforge_domain::{RunRepository, RunService, TemplateRepository, TemplateService};
     use indexmap::IndexMap;
@@ -875,8 +904,14 @@ mod tests {
             source("notes.md", "text/markdown", b"hello"),
         ];
 
-        let payload = build_extraction_payload(AiProtocol::Responses, "model-a", "prompt", &files)
-            .expect("build Responses request");
+        let payload = build_extraction_payload(
+            AiProtocol::Responses,
+            "model-a",
+            "prompt",
+            AiReasoningEffort::Default,
+            &files,
+        )
+        .expect("build Responses request");
 
         let content = payload
             .pointer("/input/0/content")
@@ -911,9 +946,14 @@ mod tests {
             source("notes.txt", "text/plain", b"hello"),
         ];
 
-        let payload =
-            build_extraction_payload(AiProtocol::ChatCompletions, "model-b", "prompt", &files)
-                .expect("build Chat Completions request");
+        let payload = build_extraction_payload(
+            AiProtocol::ChatCompletions,
+            "model-b",
+            "prompt",
+            AiReasoningEffort::Default,
+            &files,
+        )
+        .expect("build Chat Completions request");
 
         let content = payload
             .pointer("/messages/0/content")
@@ -936,6 +976,39 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("Source file: notes.txt"));
+    }
+
+    #[test]
+    fn extraction_payload_applies_global_reasoning_effort_to_both_protocols() {
+        let responses = build_extraction_payload(
+            AiProtocol::Responses,
+            "model-a",
+            "prompt",
+            AiReasoningEffort::High,
+            &[],
+        )
+        .expect("build Responses request");
+        assert_eq!(responses["reasoning"]["effort"], "high");
+
+        let chat = build_extraction_payload(
+            AiProtocol::ChatCompletions,
+            "model-b",
+            "prompt",
+            AiReasoningEffort::High,
+            &[],
+        )
+        .expect("build Chat Completions request");
+        assert_eq!(chat["reasoning_effort"], "high");
+
+        let provider_default = build_extraction_payload(
+            AiProtocol::Responses,
+            "model-a",
+            "prompt",
+            AiReasoningEffort::Default,
+            &[],
+        )
+        .expect("build request with provider defaults");
+        assert!(provider_default.get("reasoning").is_none());
     }
 
     #[test]
@@ -1057,7 +1130,12 @@ mod tests {
 
         let runtime = tokio::runtime::Runtime::new().expect("create AI test runtime");
         let raw = runtime
-            .block_on(connections.extract_run(&run_repository, &run.id, &prompt))
+            .block_on(connections.extract_run(
+                &run_repository,
+                &run.id,
+                &prompt,
+                AiReasoningEffort::Default,
+            ))
             .expect("extract through mock endpoint");
         let (headers, request_body) = server.join().expect("mock server thread");
         assert!(headers.contains("POST /v1/responses"));

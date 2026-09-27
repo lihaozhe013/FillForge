@@ -1371,6 +1371,14 @@ button.theme-choice {
   background: var(--panel);
 }
 
+.reasoning-effort-card {
+  grid-template-columns: minmax(220px, 0.8fr) minmax(220px, 1.2fr);
+}
+
+.reasoning-effort-save-note {
+  grid-column: 1 / -1;
+}
+
 .connection-default-card label,
 .connection-form-card label:not(.checkbox):not(.ai-model-default) {
   display: flex;

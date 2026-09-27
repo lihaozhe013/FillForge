@@ -231,6 +231,24 @@ pub struct ExtractionConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub prompt_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub reasoning_effort: Option<AiReasoningEffort>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+#[ts(rename_all = "kebab-case")]
+pub enum AiReasoningEffort {
+    #[default]
+    Default,
+    None,
+    Minimal,
+    Low,
+    Medium,
+    High,
+    Xhigh,
+    Max,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -241,6 +259,7 @@ pub struct ResolvedAppConfig {
     pub language: AppLanguageSetting,
     pub show_advanced_fields: bool,
     pub prompt_version: String,
+    pub reasoning_effort: AiReasoningEffort,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, TS, PartialEq, Eq)]

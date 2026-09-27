@@ -4,7 +4,8 @@ import type {
   AiConnectionInput,
   AiConnectionSummary,
   AiModelDiscoveryRequest,
-  AiModelProfile
+  AiModelProfile,
+  AiReasoningEffort
 } from '../lib/generated-types';
 import type { AppErrorDtoLike } from '../lib/ipc-protocol';
 import { ErrorBanner, Section } from '../components/ui';
@@ -24,6 +25,16 @@ type ConnectionDraft = {
 
 const MAX_CONFIGURED_MODELS = 256;
 const DISCOVERED_PAGE_SIZE = 100;
+const REASONING_EFFORTS: AiReasoningEffort[] = [
+  'default',
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max'
+];
 
 function createEmptyConnection(name = ''): ConnectionDraft {
   return {
@@ -56,7 +67,13 @@ function newModel(model = ''): AiModelProfile {
   return { id: crypto.randomUUID(), model };
 }
 
-export function AiConnectionsSettings() {
+export function AiConnectionsSettings({
+  reasoningEffort,
+  onReasoningEffortChange
+}: {
+  reasoningEffort: AiReasoningEffort;
+  onReasoningEffortChange: (effort: AiReasoningEffort) => void;
+}) {
   const { t } = useTranslation();
   const connections = useAsyncData(() => window.fillforge.aiConnections.list(), []);
   const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
@@ -360,6 +377,27 @@ export function AiConnectionsSettings() {
         <button onClick={startNewConnection}>{t('settings.addConnection')}</button>
       </div>
       <ErrorBanner error={error ?? connections.error} />
+      <Section title={t('settings.extractionBehavior')}>
+        <div className="connection-default-card reasoning-effort-card">
+          <label>
+            {t('settings.reasoningEffort')}
+            <select
+              value={reasoningEffort}
+              onChange={(event) => onReasoningEffortChange(event.target.value as AiReasoningEffort)}
+            >
+              {REASONING_EFFORTS.map((effort) => (
+                <option key={effort} value={effort}>
+                  {t(`settings.reasoningEffort${effort[0]?.toUpperCase()}${effort.slice(1)}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="muted">{t('settings.reasoningEffortDescription')}</p>
+          <p className="muted reasoning-effort-save-note">
+            {t('settings.reasoningEffortSaveNote')}
+          </p>
+        </div>
+      </Section>
       <div className="connection-default-card">
         <label>
           {t('settings.defaultConnection')}

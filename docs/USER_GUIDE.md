@@ -568,12 +568,16 @@ choose another model or use the Advanced tools.
 
 ### 6.2 Configure an AI connection
 
-Open **Settings → AI connections** to add a named connection. Choose the Responses or Chat
-Completions protocol, enter an HTTPS endpoint (HTTP is allowed for loopback endpoints on this
-computer), then choose **Discover models**. Search the results and add the models you want to keep;
-you can also enter a model ID yourself. Select a default model and save the connection. You can
-discover or test an unsaved connection before saving it. Choose a default AI connection at the top
-of the settings page. The Run page uses it and does not ask you to select a model for each document.
+Open **Settings → AI connections** to set a global **Reasoning effort** and add a named connection.
+The reasoning selection applies to every document extraction request. **Provider default** leaves
+the choice to the model; the model and endpoint must support any explicit level you select. Choose
+the Responses or Chat Completions protocol, enter an HTTPS endpoint (HTTP is allowed for loopback
+endpoints on this computer), then choose **Discover models**. Search the results and add the models
+you want to keep; you can also enter a model ID yourself. Select a default model and save the
+connection. You can discover or test an unsaved connection before saving it. Choose a default AI
+connection at the top of the settings page. Save settings at the top of the AI connections page to
+apply the reasoning selection. The Run page uses the default connection and does not ask you to
+select a model for each document.
 
 If a Responses endpoint cannot list models, discovery can verify the model ID you entered by
 sending a small request with no files and `store: false`. **Test connection** sends a small request

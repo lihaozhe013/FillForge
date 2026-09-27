@@ -1,4 +1,4 @@
-import type { ResolvedAppConfig } from '../lib/generated-types';
+import type { AiReasoningEffort, ResolvedAppConfig } from '../lib/generated-types';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Navigate, Route } from '../App';
@@ -69,9 +69,15 @@ export function SettingsPage({
           <p className="eyebrow">{t('settings.eyebrow')}</p>
           <h1>{t('settings.title')}</h1>
         </div>
-        {category !== 'aiConnections' && category !== 'data' && (
+        {category !== 'data' && (
           <button className="primary" disabled={busy} onClick={() => void saveSettings()}>
-            {saved ? t('common.saved') : t('common.save')}
+            {category === 'aiConnections'
+              ? saved
+                ? t('common.saved')
+                : t('settings.savePreferences')
+              : saved
+                ? t('common.saved')
+                : t('common.save')}
           </button>
         )}
       </header>
@@ -187,7 +193,15 @@ export function SettingsPage({
             </>
           )}
 
-          {category === 'aiConnections' && <AiConnectionsSettings />}
+          {category === 'aiConnections' && (
+            <AiConnectionsSettings
+              reasoningEffort={draft.reasoningEffort}
+              onReasoningEffortChange={(reasoningEffort: AiReasoningEffort) => {
+                setSaved(false);
+                setDraft({ ...draft, reasoningEffort });
+              }}
+            />
+          )}
 
           {category === 'data' && (
             <>
